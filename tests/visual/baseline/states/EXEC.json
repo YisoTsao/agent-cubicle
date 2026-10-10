@@ -3,7 +3,7 @@
   "z": -1.88,
   "yaw": 3.141592653589793,
   "moving": false,
-  "place": "terminal",
+  "place": "terminal:0",
   "hips": [0.9889134457334876, 0.6700000166893005, -1.88],
   "gesture": "stand_terminal",
   "posture": "stand",

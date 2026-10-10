@@ -64,12 +64,19 @@ describe('hook settings editing', () => {
     expect(cmd).toContain(`'/Users/o'\\''brien/my home/.agentcubicle/token'`)
   })
 
+  it('uses forward slashes for Windows home directories', () => {
+    const cmd = hookCommand('C:\\Users\\me\\.agentcubicle', 'http://127.0.0.1:1/h')
+    expect(cmd).toContain(`'C:/Users/me/.agentcubicle/token'`)
+    expect(cmd).not.toContain('\\')
+  })
+
   it('renders a readable diff', () => {
     expect(lineDiff('a\nb\nc', 'a\nx\nc')).toBe('  a\n+ x\n- b\n  c')
   })
 })
 
-describe('hook command (real shell + curl)', () => {
+// Needs a POSIX sh + curl; Windows CI runners don't guarantee Git Bash on PATH.
+describe.skipIf(process.platform === 'win32')('hook command (real shell + curl)', () => {
   it('delivers stdin JSON with the token, and exits 0 silently when the app is down', async () => {
     const home = mkdtempSync(join(tmpdir(), 'cubicle-hookcmd-'))
     writeFileSync(join(home, 'token'), 'T0K3N\n')

@@ -216,6 +216,19 @@ describe('ingestion (dedupe, ordering, validation)', () => {
     expect(seats()).toEqual({ b: 1, c: 0 })
   })
 
+  it('removes IDLE sessions that went silent (closed without SESSION_ENDED)', () => {
+    const { hub, send, tick } = setup({ idleExpireMs: 60_000, staleAfterMs: 30_000 })
+    send('SESSION_STARTED', { sessionId: 'quiet' })
+    send('TASK_STARTED', { sessionId: 'busy' })
+    tick(59_000)
+    expect(hub.snapshot().sessions).toHaveLength(2)
+    tick(2_000)
+    // The IDLE one is gone; the ACTIVE one went STALE instead (never silently dropped).
+    expect(hub.snapshot().sessions.map((s) => [s.sessionId, s.presence])).toEqual([
+      ['busy', 'STALE'],
+    ])
+  })
+
   it('prefers the seat an agent used before', () => {
     const { hub, send, tick } = setup({ seats: 2, endedLingerMs: 0 })
     send('SESSION_STARTED', { agentId: 'codex', sessionId: 'x1' })

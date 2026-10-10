@@ -10,6 +10,6 @@
     "src/main/**/*",
     "src/preload/**/*",
     "packages/shared/src/**/*",
-    "tools/**/*"
+    "tools/simulator/**/*"
   ]
 }

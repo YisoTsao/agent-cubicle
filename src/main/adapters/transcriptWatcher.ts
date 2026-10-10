@@ -8,6 +8,8 @@ import { basename, sep } from 'node:path'
 //  - New files are read from the start.
 //  - Handles partial lines, truncation (offset reset) and deletion. Read errors are logged and
 //    skipped; nothing here can crash the main process.
+//  - A light size poll backs up file-system events, which can be delayed or dropped under load
+//    or across sleep.
 
 export interface TranscriptWatcherOptions {
   root: string
@@ -24,11 +26,13 @@ interface FileState {
 }
 
 const MAX_READ = 4 * 1024 * 1024
+const POLL_MS = 2000
 
 export class TranscriptWatcher {
   private watcher: FSWatcher | null = null
   private readonly files = new Map<string, FileState>()
   private ready = false
+  private poll: ReturnType<typeof setInterval> | null = null
   /** Startup scans of pre-existing files; start() resolves once they are done. */
   private readonly initial: Promise<void>[] = []
   readonly stats = { files: 0, lines: 0, errors: 0 }
@@ -57,6 +61,7 @@ export class TranscriptWatcher {
       })
       w.on('ready', () => {
         this.ready = true
+        this.poll = setInterval(() => void this.pollSizes(), POLL_MS)
         void Promise.allSettled(this.initial).then(() => resolve())
       })
       this.watcher = w
@@ -64,6 +69,8 @@ export class TranscriptWatcher {
   }
 
   async stop(): Promise<void> {
+    if (this.poll) clearInterval(this.poll)
+    this.poll = null
     await this.watcher?.close()
     this.watcher = null
     this.files.clear()
@@ -90,6 +97,17 @@ export class TranscriptWatcher {
     this.files.set(path, { offset: 0, partial: '', queue: Promise.resolve() })
     this.stats.files = this.files.size
     this.enqueue(path)
+  }
+
+  private async pollSizes(): Promise<void> {
+    for (const [path, f] of this.files) {
+      try {
+        const { size } = await stat(path)
+        if (size !== f.offset) this.enqueue(path)
+      } catch {
+        // deleted between polls: chokidar's unlink will clean up
+      }
+    }
   }
 
   /** Serialize reads per file so appends are processed in order. */

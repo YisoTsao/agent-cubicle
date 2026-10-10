@@ -8,6 +8,7 @@ on:
 jobs:
   check:
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
@@ -23,9 +24,33 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
-      - name: E2E (Linux needs a virtual display)
-        if: runner.os == 'Linux'
-        run: xvfb-run --auto-servernum pnpm test:e2e
+
+      # Linux needs a virtual display for Electron.
       - name: E2E
-        if: runner.os != 'Linux'
-        run: pnpm test:e2e
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then xvfb-run --auto-servernum pnpm test:e2e; else pnpm test:e2e; fi
+
+      - name: Package (unsigned) + packaged smoke test
+        shell: bash
+        run: |
+          pnpm dist:dir
+          if [ "$RUNNER_OS" = "Linux" ]; then xvfb-run --auto-servernum pnpm test:packaged; else pnpm test:packaged; fi
+
+      # Visual baselines are for human review (GPU output differs across runners), so they are
+      # uploaded as artifacts rather than pixel-compared.
+      - name: Visual captures
+        if: runner.os == 'macOS'
+        run: pnpm screenshots
+      - uses: actions/upload-artifact@v4
+        if: always() && runner.os == 'macOS'
+        with:
+          name: visual-captures
+          path: tests/visual/baseline
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results-${{ matrix.os }}
+          path: test-results
+          if-no-files-found: ignore

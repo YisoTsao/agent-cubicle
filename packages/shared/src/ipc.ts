@@ -6,6 +6,8 @@ export const IpcChannel = {
   Ping: 'cubicle:ping',
   GetSnapshot: 'cubicle:get-snapshot',
   StateChanged: 'cubicle:state-changed',
+  SettingsGet: 'cubicle:settings:get',
+  SettingsSet: 'cubicle:settings:set',
   // Integrations (user-facing)
   IntegrationStatus: 'cubicle:integration:status',
   HookPlan: 'cubicle:integration:hook-plan',
@@ -75,11 +77,22 @@ export interface CubicleIntegrationApi {
   applyHooks(planId: string): Promise<IntegrationStatus>
 }
 
+export interface UserSettings {
+  quality: 'high' | 'balanced' | 'low'
+  alwaysOnTop: boolean
+}
+
+export interface CubicleSettingsApi {
+  get(): Promise<UserSettings>
+  set(patch: Partial<UserSettings>): Promise<UserSettings>
+}
+
 /** API exposed on `window.cubicle` by the preload script. */
 export interface CubicleApi {
   ping(): Promise<PingResult>
   getSnapshot(): Promise<StateSnapshot>
   onState(callback: (snapshot: StateSnapshot) => void): () => void
+  settings: CubicleSettingsApi
   integration: CubicleIntegrationApi
   dev: CubicleDevApi
 }

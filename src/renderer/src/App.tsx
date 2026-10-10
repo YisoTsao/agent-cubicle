@@ -1,13 +1,14 @@
 import { Canvas } from '@react-three/fiber'
 import { Suspense, useEffect, useState } from 'react'
-import { BACKGROUND, RENDERER } from './config/render'
+import { BACKGROUND, QUALITY_PRESETS, RENDERER } from './config/render'
 import { Effects } from './scene/Effects'
 import { IsoCamera } from './scene/IsoCamera'
 import { Lighting } from './scene/Lighting'
 import { OfficeScene } from './scene/OfficeScene'
 import { useQuality } from './scene/useQuality'
+import { FrameCap, usePageVisible } from './scene/FrameDriver'
 import { connectAgents, useAgents } from './store/agents'
-import { useSettings } from './store/settings'
+import { loadPersistedSettings, useSettings } from './store/settings'
 import { DevPanel } from './ui/DevPanel'
 import { IntegrationPanel } from './ui/IntegrationPanel'
 import { DevCameraProbe, installDevApi } from './ui/devApi'
@@ -24,6 +25,13 @@ export function App() {
   const [connectOpen, setConnectOpen] = useState(false)
 
   useEffect(() => connectAgents(), [])
+  useEffect(() => loadPersistedSettings(), [])
+
+  // Long-running desktop app (SPEC §6/§8): stop rendering when nobody can see the window, and
+  // cap Low quality at 30 FPS. Agent state keeps updating in the main process meanwhile.
+  const visible = usePageVisible()
+  const capped = q === QUALITY_PRESETS.low
+  const frameloop = !visible && !showcase ? 'never' : capped ? 'demand' : 'always'
   useEffect(() => (showDiagnostics ? installDevApi() : undefined), [showDiagnostics])
 
   useEffect(() => {
@@ -46,6 +54,7 @@ export function App() {
           toneMappingExposure: RENDERER.toneMappingExposure,
           outputColorSpace: RENDERER.outputColorSpace,
         }}
+        frameloop={frameloop}
         onCreated={() => setReady(true)}
       >
         <color attach="background" args={[BACKGROUND]} />
@@ -55,6 +64,7 @@ export function App() {
           <OfficeScene />
         </Suspense>
         <Effects />
+        {frameloop === 'demand' && <FrameCap fps={30} />}
         <StatsProbe onSample={showDiagnostics ? setStats : noop} />
         {showDiagnostics && <DevCameraProbe />}
       </Canvas>
@@ -69,7 +79,7 @@ export function App() {
           onClick={() => setConnectOpen((v) => !v)}
           data-testid="connect-button"
         >
-          連接
+          設定
         </button>
       )}
       {connectOpen && <IntegrationPanel onClose={() => setConnectOpen(false)} />}

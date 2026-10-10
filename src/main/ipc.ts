@@ -1,7 +1,8 @@
-import { app, ipcMain, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron'
 import { z } from 'zod'
 import { IpcChannel, type PingResult, type StateSnapshot } from '@shared/ipc'
 import { SCENARIOS, SCENARIO_NAMES } from '@shared/sim/scenarios'
+import { SettingsPatch, type SettingsStore } from './appSettings'
 import type { HubService } from './hubService'
 import type { Integrations } from './integrations'
 import { isTrustedRendererUrl } from './security'
@@ -29,7 +30,29 @@ const RunArgs = z.tuple([
 const HookAction = z.tuple([z.enum(['install', 'uninstall'])])
 const PlanId = z.tuple([z.string().uuid()])
 
-export function registerIpcHandlers(hub: HubService, integrations: Integrations): void {
+export function registerIpcHandlers(
+  hub: HubService,
+  integrations: Integrations,
+  settings: SettingsStore,
+): void {
+  const userSettings = () => {
+    const { quality, alwaysOnTop } = settings.get()
+    return { quality, alwaysOnTop }
+  }
+  ipcMain.handle(IpcChannel.SettingsGet, (event) => {
+    assertTrustedSender(event)
+    return userSettings()
+  })
+  ipcMain.handle(IpcChannel.SettingsSet, (event, patch: unknown) => {
+    assertTrustedSender(event)
+    const p = SettingsPatch.parse(patch)
+    settings.update(p)
+    if (p.alwaysOnTop !== undefined) {
+      for (const win of BrowserWindow.getAllWindows()) win.setAlwaysOnTop(p.alwaysOnTop)
+    }
+    return userSettings()
+  })
+
   ipcMain.handle(IpcChannel.Ping, (event): PingResult => {
     assertTrustedSender(event)
     return { pong: true, appVersion: app.getVersion(), timestamp: Date.now() }

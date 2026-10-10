@@ -8,7 +8,7 @@
     "dpr": 1
   },
   "stats": {
-    "fps": 120,
+    "fps": 30,
     "drawCalls": 75,
     "triangles": 205305,
     "geometries": 68,

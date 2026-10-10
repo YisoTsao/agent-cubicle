@@ -17,6 +17,11 @@ export interface HubConfig extends ReducerConfig {
   seats: number
   /** Ended sessions linger this long (so the UI can show them leaving) before removal. */
   endedLingerMs: number
+  /**
+   * IDLE sessions silent for this long are removed. Sessions whose terminal was simply closed
+   * never send SESSION_ENDED; without this they would accumulate forever (found by the soak test).
+   */
+  idleExpireMs: number
   /** How many recent eventIds to remember for de-duplication. */
   dedupeWindow: number
   /** 'basename' keeps only the last path segment of `detail` (privacy default, SPEC §8). */
@@ -29,6 +34,7 @@ export const DEFAULT_HUB_CONFIG: HubConfig = {
   ...DEFAULT_REDUCER_CONFIG,
   seats: 2,
   endedLingerMs: 15_000,
+  idleExpireMs: 30 * 60_000,
   dedupeWindow: 2_000,
   detailMode: 'basename',
   diagnosticsSize: 50,
@@ -120,7 +126,9 @@ export class EventHub {
     const now = this.now()
     let changed = false
     for (const [key, s] of this.sessions) {
-      if (s.endedAt !== undefined && now - s.endedAt >= this.cfg.endedLingerMs) {
+      const ended = s.endedAt !== undefined && now - s.endedAt >= this.cfg.endedLingerMs
+      const abandoned = s.presence === 'IDLE' && now - s.lastEventAt >= this.cfg.idleExpireMs
+      if (ended || abandoned) {
         this.sessions.delete(key)
         changed = true
         continue

@@ -1,4 +1,5 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, powerMonitor } from 'electron'
+import { SettingsStore } from './appSettings'
 import { HubService } from './hubService'
 import { Integrations } from './integrations'
 import { devToolsEnabled, registerIpcHandlers } from './ipc'
@@ -31,15 +32,18 @@ if (!app.requestSingleInstanceLock()) {
 
   void app.whenReady().then(() => {
     hardenSession()
-    registerIpcHandlers(hub, integrations)
+    const settings = new SettingsStore()
+    app.on('before-quit', () => settings.flush())
+    registerIpcHandlers(hub, integrations, settings)
     hub.start()
     void integrations.start()
-    mainWindow = createMainWindow()
+    powerMonitor.on('resume', () => void integrations.onResume())
+    mainWindow = createMainWindow(settings)
     autoSimulate(hub)
     mainWindow.on('closed', () => (mainWindow = null))
 
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) mainWindow = createMainWindow()
+      if (BrowserWindow.getAllWindows().length === 0) mainWindow = createMainWindow(settings)
     })
   })
 

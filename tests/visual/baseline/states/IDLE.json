@@ -3,7 +3,7 @@
   "z": 0.95,
   "yaw": 1.5707963267948966,
   "moving": false,
-  "place": "lounge",
+  "place": "lounge:0",
   "hips": [-2.33999999910593, 0.5899999737739563, 0.95],
   "gesture": "idle_coffee",
   "posture": "sit_sofa",

@@ -10,6 +10,10 @@ const api: CubicleApi = {
     ipcRenderer.on(IpcChannel.StateChanged, listener)
     return () => ipcRenderer.removeListener(IpcChannel.StateChanged, listener)
   },
+  settings: {
+    get: () => ipcRenderer.invoke(IpcChannel.SettingsGet),
+    set: (patch) => ipcRenderer.invoke(IpcChannel.SettingsSet, patch),
+  },
   integration: {
     status: () => ipcRenderer.invoke(IpcChannel.IntegrationStatus),
     planHooks: (action) => ipcRenderer.invoke(IpcChannel.HookPlan, action),

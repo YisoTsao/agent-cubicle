@@ -1,12 +1,24 @@
 import { join } from 'node:path'
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, screen, type Rectangle } from 'electron'
+import type { SettingsStore } from './appSettings'
 import { hardenWebContents } from './security'
 import { SECURE_WEB_PREFERENCES } from './webPreferences'
 
-export function createMainWindow(): BrowserWindow {
+/** Saved bounds are reused only if they are still mostly on a connected display. */
+function restorableBounds(saved: Rectangle | undefined): Partial<Rectangle> {
+  if (!saved) return { width: 1280, height: 800 }
+  const area = screen.getDisplayMatching(saved).workArea
+  const overlapW = Math.min(saved.x + saved.width, area.x + area.width) - Math.max(saved.x, area.x)
+  const overlapH =
+    Math.min(saved.y + saved.height, area.y + area.height) - Math.max(saved.y, area.y)
+  return overlapW > 200 && overlapH > 150 ? saved : { width: saved.width, height: saved.height }
+}
+
+export function createMainWindow(settings: SettingsStore): BrowserWindow {
+  const prefs = settings.get()
   const win = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    ...restorableBounds(prefs.bounds),
+    alwaysOnTop: prefs.alwaysOnTop,
     minWidth: 640,
     minHeight: 400,
     show: false,
@@ -22,6 +34,12 @@ export function createMainWindow(): BrowserWindow {
 
   hardenWebContents(win.webContents)
   win.once('ready-to-show', () => win.show())
+  const saveBounds = () => {
+    if (!win.isDestroyed() && !win.isMinimized() && !win.isFullScreen())
+      settings.update({ bounds: win.getNormalBounds() })
+  }
+  win.on('resized', saveBounds)
+  win.on('moved', saveBounds)
 
   const query = rendererQuery()
   const devUrl = process.env['ELECTRON_RENDERER_URL']

@@ -20,8 +20,10 @@ function sq(s: string): string {
 }
 
 export function hookCommand(home: string, fallbackUrl: string): string {
-  const token = `${home}/token`
-  const url = `${home}/hook-url`
+  // Claude Code runs hooks with bash (Git Bash on Windows), which reads C:/… paths fine.
+  const dir = home.replace(/\\/g, '/')
+  const token = `${dir}/token`
+  const url = `${dir}/hook-url`
   return [
     'curl -s -o /dev/null --connect-timeout 0.3 -m 0.5 -X POST',
     `-H 'Content-Type: application/json'`,

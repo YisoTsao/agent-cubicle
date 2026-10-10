@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { HookPlanView, IntegrationStatus } from '@shared/ipc'
+import type { QualityLevel } from '../config/render'
+import { useSettings } from '../store/settings'
 
 // "連接" panel (SPEC §5): server status, Claude Code hook install/uninstall with a mandatory
 // diff preview, transcript watcher status and webhook details for custom agents.
@@ -53,15 +55,47 @@ export function IntegrationPanel({ onClose }: { onClose(): void }) {
 
   const server = status?.server
   const hooks = status?.hooks
+  const quality = useSettings((s) => s.quality)
+  const setQuality = useSettings((s) => s.setQuality)
+  const alwaysOnTop = useSettings((s) => s.alwaysOnTop)
+  const setAlwaysOnTop = useSettings((s) => s.setAlwaysOnTop)
 
   return (
-    <div className="panel" role="dialog" aria-label="連接 AI Agent" data-testid="integration-panel">
+    <div className="panel" role="dialog" aria-label="設定與連接" data-testid="integration-panel">
       <div className="panel__header">
-        <span>連接 AI Agent</span>
+        <span>設定與連接</span>
         <button className="panel__close" onClick={onClose} aria-label="關閉">
           ×
         </button>
       </div>
+
+      <section>
+        <h3>顯示</h3>
+        <div className="row" role="radiogroup" aria-label="畫質">
+          {QUALITY_OPTIONS.map(([value, label]) => (
+            <button
+              key={value}
+              role="radio"
+              aria-checked={quality === value}
+              className={quality === value ? 'primary' : ''}
+              onClick={() => setQuality(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="muted small">
+          省電會關閉環境光遮蔽與光暈，並限制在 30 FPS；視窗看不到時一律暫停繪製。
+        </p>
+        <label className="small">
+          <input
+            type="checkbox"
+            checked={alwaysOnTop}
+            onChange={(e) => setAlwaysOnTop(e.target.checked)}
+          />{' '}
+          視窗永遠置頂
+        </label>
+      </section>
 
       <section>
         <h3>本機事件伺服器</h3>
@@ -104,10 +138,9 @@ export function IntegrationPanel({ onClose }: { onClose(): void }) {
         {plan && (
           <div className="plan" data-testid="hook-plan">
             <p>
-              {plan.action === 'install' ? '將在' : '將從'} <code>{plan.path}</code>{' '}
               {plan.action === 'install'
-                ? '加入以下觀察用 hooks（只讀取事件，不會阻擋或控制 Claude）：'
-                : '移除 AgentCubicle 的 hooks：'}
+                ? '將在上述設定檔加入以下觀察用 hooks（只讀取事件，不會阻擋或控制 Claude）：'
+                : '將從上述設定檔移除 AgentCubicle 的 hooks：'}
               {!plan.fileExists && '（檔案不存在，將會建立）'}
             </p>
             <pre className="diff" data-testid="hook-diff">
@@ -170,6 +203,12 @@ export function IntegrationPanel({ onClose }: { onClose(): void }) {
     </div>
   )
 }
+
+const QUALITY_OPTIONS: [QualityLevel, string][] = [
+  ['high', '高'],
+  ['balanced', '平衡'],
+  ['low', '省電'],
+]
 
 function messageOf(e: unknown): string {
   const m = e instanceof Error ? e.message : String(e)

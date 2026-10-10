@@ -1,7 +1,7 @@
-node_modules
-out
-dist
-test-results
-playwright-report
 .DS_Store
 *.log
+dist
+node_modules
+out
+playwright-report
+test-results

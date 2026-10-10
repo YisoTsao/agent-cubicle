@@ -7,7 +7,7 @@
 | 2 角色動畫        | ✅ 完成（2026-10-10） | 使用者驗收動作                        |
 | 3 狀態機 + 模擬器 | ✅ 完成（2026-10-10） | 使用者驗收                            |
 | 4 真實整合        | ✅ 完成（2026-10-10） | 使用者驗收；真實 Claude Code 驗證延後 |
-| 5 正式化          | 進行中                |                                       |
+| 5 正式化          | ✅ 完成（2026-10-10） | soak PASS                             |
 
 每階段完成後補：測試結果 / 已知限制 / 待辦。
 
@@ -203,3 +203,45 @@
 - 連接面板的設定檔路徑顯示兩次（小瑕疵）
 
 **驗收**：使用者確認截圖（2026-10-10）；使用者選擇暫不以真實 Claude Code 驗證（需耗用額度），已改以「實際安裝的 hook 指令 + 官方格式 payload」e2e 驗證
+
+---
+
+## Phase 5 — 正式化（分支 `phase-5-production`）
+
+**交付**
+
+- 長時間常駐：視窗不可見（最小化/隱藏/被完全遮住）時 `frameloop="never"`；「省電」畫質改為 demand 模式 30 FPS；狀態仍由 main 持續更新
+- 偏好設定持久化（`userData/settings.json`，zod 驗證、逐欄位回退預設、寫入防抖）：畫質、視窗置頂、視窗位置與大小（僅在仍位於螢幕上時還原）
+- 「設定」面板新增「顯示」區（高 / 平衡 / 省電、永遠置頂）；修正設定檔路徑重複顯示
+- 休眠喚醒：`powerMonitor.resume` 重建 JSONL 監聽（從檔尾重新開始，不重播）；監聽器另加 2 秒檔案大小輪詢作為檔案系統事件的保險（測試在高負載下發現事件可能延遲/遺失）
+- 安全收緊：可信 renderer 從「任何 file://」改為「僅 App 自己的 renderer 目錄」
+- Windows：hook 指令路徑改用正斜線（Git Bash 可讀）
+- **Soak test 抓到的實際缺陷**：沒有送 `SessionEnd` 就被關掉的 session 會以 IDLE 永遠留在 hub。新增 `idleExpireMs`（預設 30 分鐘）自動清除；模擬情境補上 `SESSION_ENDED`
+- 打包：electron-builder（mac dmg+zip、win nsis、linux AppImage），簽章/公證以環境變數啟用；`dependencies` 只留 main 執行期需要的 `zod`（renderer 全部打包進 bundle），asar 僅 9.1 MB；暫用 App 圖示
+- `pnpm test:packaged`：對打包版驗證（`app.isPackaged`、開發用 IPC 被拒、CSP 嚴格、本機 server 與 webhook 可用、設定重啟後保留）
+- `pnpm soak`：長時間穩定性測試（情境 3× 輪播 + 3 個 webhook agent + 每 5 分鐘 respawn，每 30 秒強制 GC 後取樣），報告寫入 `docs/soak/`
+- CI：三平台加上打包 + 打包版 smoke test、macOS 截圖上傳為 artifact；新增 `release.yml`（推 `v*` tag 產出三平台安裝檔到 draft release）
+- 使用者文件：`README.md`（安裝、連接、角色狀態對照、設定、疑難排解、開發指令）
+
+**測試結果**
+
+- unit 212/212、e2e 31/31、visual 15/15、packaged smoke 1/1（macOS arm64 打包版）
+- **Soak 30 分鐘：PASS**（`docs/soak/soak-2026-10-10T11-56-26.md`）
+
+| 指標                         | 暖機後     | 結束前                  |
+| ---------------------------- | ---------- | ----------------------- |
+| Main JS heap                 | 8.2 MB     | 8.3 MB（+1.2%）         |
+| 所有程序總 working set       | 446 MB     | 420 MB                  |
+| GPU geometries / textures    | 79 / 54    | 79 / 54                 |
+| Hub sessions                 | 5–6        | 5–6（修正前會持續增加） |
+| FPS（同時 4 角色、Balanced） | 中位數 120 | 最低 114                |
+
+**量測（1920×1080）**：Balanced 2× ~109 FPS、High 2× ~64 FPS、省電 30 FPS（上限生效）；draw calls 105（省電 75）
+
+**已知限制**
+
+- 這次 soak 的 renderer heap 取自 Chromium 粗粒度化的 `performance.memory`（固定 57.5 MB），以總 working set 佐證；工具已加 `--enable-precise-memory-info`，下次即為精確值
+- 只在 macOS arm64 實際打包與執行；Windows / Linux 打包與打包版測試已寫進 CI，但 repo 尚無 remote，未實際跑過
+- 未簽章、未公證（需 Apple Developer / Windows 憑證，`release.yml` 已預留）；App 圖示為暫用版本
+- Windows 的 hook 指令依賴 Git Bash + curl（Claude Code on Windows 預設），未在 Windows 實測
+- 走路時角色可能互相穿過（無碰撞避讓）；真實 Claude Code 端到端驗證仍待使用者同意

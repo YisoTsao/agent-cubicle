@@ -41,6 +41,16 @@ export class Integrations {
     await Promise.all([this.server?.stop(), this.watcher?.stop()])
   }
 
+  /**
+   * After system sleep, file watchers may have missed events (and fsevents handles can go
+   * stale): rebuild the transcript watcher. It re-tails from the end, so nothing is replayed.
+   */
+  async onResume(): Promise<void> {
+    await this.watcher?.stop()
+    this.watcher = null
+    await this.startTranscripts()
+  }
+
   status(): IntegrationStatus {
     const s = this.server?.status ?? { state: 'stopped' as const }
     const hooks = this.installer.status()

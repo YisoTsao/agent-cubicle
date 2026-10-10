@@ -68,6 +68,7 @@ export const SCENARIOS: Scenario[] = [
       ...tool(10_000, 6_000, 'Edit', 'WRITE', 'src/renderer/src/store/agents.ts'),
       ...tool(17_500, 7_000, 'Bash', 'EXEC', 'pnpm test'),
       { at: 26_000, type: 'TASK_COMPLETED' },
+      { at: 32_000, type: 'SESSION_ENDED' },
     ],
   },
   {
@@ -90,6 +91,7 @@ export const SCENARIOS: Scenario[] = [
       { at: 9_000, type: 'HEARTBEAT' },
       { at: 13_000, type: 'TOOL_COMPLETED', toolName: 'Bash', toolKind: 'EXEC', success: true },
       { at: 15_000, type: 'TASK_COMPLETED' },
+      { at: 21_000, type: 'SESSION_ENDED' },
     ],
   },
   {
@@ -108,6 +110,7 @@ export const SCENARIOS: Scenario[] = [
       { at: 19_000, type: 'TASK_STARTED' },
       ...tool(20_500, 4_000, 'Edit', 'WRITE', 'src/main/index.ts'),
       { at: 26_000, type: 'TASK_COMPLETED' },
+      { at: 32_000, type: 'SESSION_ENDED' },
     ],
   },
   {
@@ -147,6 +150,7 @@ export const SCENARIOS: Scenario[] = [
       },
       { at: 8_500, type: 'TASK_COMPLETED', sequence: 6 },
       { at: 9_000, duplicateOf: 6, type: 'TOOL_COMPLETED' },
+      { at: 14_000, type: 'SESSION_ENDED', sequence: 7 },
     ],
   },
   {
@@ -168,6 +172,7 @@ export const SCENARIOS: Scenario[] = [
       // ...silence... (stale after 8 s with the demo config)
       { at: 18_000, type: 'TOOL_COMPLETED', toolName: 'Edit', toolKind: 'WRITE', success: true },
       { at: 20_000, type: 'TASK_COMPLETED' },
+      { at: 26_000, type: 'SESSION_ENDED' },
     ],
   },
   {
@@ -188,6 +193,8 @@ export const SCENARIOS: Scenario[] = [
       { at: 22_000, session: 'b', type: 'TASK_STARTED' },
       ...tool(23_000, 4_000, 'apply_patch', 'WRITE', 'lib.rs', { session: 'b' }),
       { at: 28_000, session: 'b', type: 'TASK_COMPLETED' },
+      { at: 30_000, session: 'a', type: 'SESSION_ENDED' },
+      { at: 34_000, session: 'b', type: 'SESSION_ENDED' },
     ],
   },
 ]
