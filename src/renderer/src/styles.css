@@ -1,0 +1,28 @@
+:root {
+  color-scheme: light;
+  font-family:
+    system-ui,
+    -apple-system,
+    'PingFang TC',
+    sans-serif;
+  background: #f3ece1;
+  color: #3b3127;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+.shell {
+  display: grid;
+  place-content: center;
+  height: 100%;
+  text-align: center;
+}
+
+.subtitle {
+  opacity: 0.6;
+}

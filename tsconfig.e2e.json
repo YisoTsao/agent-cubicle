@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": [
+    "playwright.config.mts",
+    "tests/**/*",
+    "src/preload/*.d.ts",
+    "packages/shared/src/**/*"
+  ],
+  "exclude": ["packages/shared/src/**/*.test.ts"]
+}
