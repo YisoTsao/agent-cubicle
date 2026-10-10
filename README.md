@@ -11,12 +11,111 @@
 
 ## 安裝
 
-到 Releases 下載對應平台的安裝檔（macOS `.dmg`、Windows `.exe`、Linux `.AppImage`），或自行建置：
+到 Releases 下載對應平台的安裝檔（macOS `.dmg`、Windows `.exe`、Linux `.AppImage`），或依下方「打包」自行建置。
+
+## 打包
+
+### 事前準備（所有平台共通）
+
+- Node.js 22、pnpm 12（`corepack enable` 會依 `package.json` 的 `packageManager` 自動取得）
+- 第一次先安裝依賴（會順便下載 Electron）：
 
 ```sh
 pnpm install
-pnpm dist        # 產出 dist/ 下的安裝檔（未簽章）
 ```
+
+| 指令              | 產出（都在 `dist/`）                                                   |
+| ----------------- | ---------------------------------------------------------------------- |
+| `pnpm dist`       | 目前作業系統的預設安裝檔                                               |
+| `pnpm dist:mac`   | `AgentCubicle-<版本>-<arch>.dmg`、`AgentCubicle-<版本>-<arch>-mac.zip` |
+| `pnpm dist:win`   | `AgentCubicle Setup <版本>.exe`（NSIS 安裝程式）                       |
+| `pnpm dist:linux` | `AgentCubicle-<版本>.AppImage`                                         |
+| `pnpm dist:dir`   | 只產生未封裝的 App 資料夾（最快，用於測試）                            |
+
+架構預設跟著執行 Node 的機器。要指定時在後面加 `--`：`pnpm dist:mac -- --arm64`、`--x64` 或 `--universal`（Intel + Apple Silicon 通用，檔案約兩倍大）。
+
+打包後可跑 smoke test 確認 App 能啟動：`pnpm dist:dir && pnpm test:packaged`。
+
+### macOS
+
+```sh
+# 沒有 Apple Developer ID 憑證時，關掉自動尋找簽章身分（產出未簽章版）
+CSC_IDENTITY_AUTO_DISCOVERY=false pnpm dist:mac -- --arm64   # Apple Silicon（M1/M2/M3…）
+CSC_IDENTITY_AUTO_DISCOVERY=false pnpm dist:mac -- --x64     # Intel Mac
+```
+
+> 若終端機跑在 Rosetta 底下（`uname -m` 顯示 `x86_64`，但機器是 Apple Silicon），請明確加 `--arm64`，否則會打包成 Intel 版。
+
+安裝：
+
+1. 打開 `dist/AgentCubicle-<版本>-arm64.dmg`，把 **AgentCubicle** 拖進「應用程式」資料夾。
+   （也可以直接解壓 `-mac.zip`，或使用 `dist/mac-arm64/AgentCubicle.app`。）
+2. 第一次開啟：在「應用程式」中對 AgentCubicle **按右鍵 →「打開」→「打開」**。
+   未簽章版只有第一次需要這樣做。
+3. 若從網路下載後出現「已損毀，無法打開」，是 Gatekeeper 的隔離標記，移除即可：
+
+```sh
+xattr -cr /Applications/AgentCubicle.app
+```
+
+正式簽章與公證（需要 Apple Developer Program）：
+
+```sh
+export CSC_LINK=/path/to/DeveloperID.p12  CSC_KEY_PASSWORD=...
+export APPLE_API_KEY=/path/to/AuthKey_XXXX.p8  APPLE_API_KEY_ID=XXXX  APPLE_API_ISSUER=<issuer-uuid>
+pnpm dist:mac -- -c.mac.notarize=true
+```
+
+### Windows
+
+在 Windows（PowerShell）上：
+
+```powershell
+pnpm install
+pnpm dist:win
+```
+
+安裝：執行 `dist\AgentCubicle Setup <版本>.exe`，可選擇安裝路徑；完成後從開始選單開啟。
+未簽章版會出現 SmartScreen「Windows 已保護您的電腦」，按「**其他資訊 → 仍要執行**」。
+移除：「設定 → 應用程式」找到 AgentCubicle 解除安裝。
+
+簽章：設定 `CSC_LINK`（或 `WIN_CSC_LINK`）指向 `.pfx` 憑證、`CSC_KEY_PASSWORD` 為密碼後再打包。
+
+### Linux
+
+```sh
+pnpm install
+pnpm dist:linux                  # x64
+pnpm dist:linux -- --arm64       # ARM64
+```
+
+執行：
+
+```sh
+chmod +x AgentCubicle-<版本>.AppImage
+./AgentCubicle-<版本>.AppImage
+```
+
+AppImage 需要 FUSE 2。Ubuntu 22.04 以後若出現 `dlopen(): error loading libfuse.so.2`，安裝 `libfuse2`（24.04 為 `libfuse2t64`）。
+
+### 跨平台打包
+
+在 macOS 上可以直接產出 Windows（`pnpm dist:win`）與 Linux（`pnpm dist:linux`）安裝檔，未簽章時不需要 Wine。
+但交叉產出的安裝檔無法在本機實測，Windows 程式碼簽章也需在 Windows 或 CI 上進行，所以正式發佈建議交給 CI。
+
+### 用 GitHub Actions 一次打包三個平台
+
+推送 `v` 開頭的 tag，`.github/workflows/release.yml` 會在 macOS / Windows / Linux runner 上各自打包，並上傳到一個 draft Release：
+
+```sh
+# 先把 package.json 的 version 改成 0.1.0
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+在 repo 的 Settings → Secrets 設定 `CSC_LINK`、`CSC_KEY_PASSWORD`、`APPLE_API_KEY`、`APPLE_API_KEY_ID`、`APPLE_API_ISSUER` 時會自動簽章與公證；沒有設定則產出未簽章版。
+
+App 圖示來自 `build/icon.png`（1024×1024），electron-builder 會自動轉成 `.icns` / `.ico`。
 
 ## 連接 Claude Code
 
