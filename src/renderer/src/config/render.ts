@@ -96,6 +96,7 @@ export const PALETTE = {
   windowLight: '#ffe9c4',
   sunPatch: '#ffcf8e',
   terminalGreen: '#5dffa0',
+  screenError: '#ff5a4a',
   ledGreen: '#7dffa8',
   ledAmber: '#ffc46b',
   rackPanel: '#55504b',

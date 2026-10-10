@@ -33,3 +33,48 @@ body,
     monospace;
   pointer-events: none;
 }
+
+.dev-panel {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgb(30 25 20 / 75%);
+  color: #f6efe4;
+  font:
+    12px/1.4 ui-monospace,
+    Menlo,
+    monospace;
+}
+
+.dev-panel__title {
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.dev-panel__grid {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 4px;
+}
+
+.dev-panel button {
+  padding: 4px 6px;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dev-panel button.active {
+  background: #e3b75a;
+  color: #2b2220;
+}
+
+.dev-panel__demo {
+  display: block;
+  margin-top: 6px;
+}

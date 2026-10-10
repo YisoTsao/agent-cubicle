@@ -27,6 +27,12 @@ export default tseslint.config(
     rules: reactHooks.configs.recommended.rules,
   },
   {
+    // Three.js objects are imperative by design: R3F code mutates memoized meshes, bones and
+    // mixers inside useFrame. The React Compiler immutability rule cannot model that.
+    files: ['src/renderer/src/scene/**/*.{ts,tsx}', 'src/renderer/src/characters/**/*.{ts,tsx}'],
+    rules: { 'react-hooks/immutability': 'off' },
+  },
+  {
     // Layering: shared must stay free of Electron/Node/Three; renderer must not reach into main.
     files: ['packages/shared/**/*.ts'],
     rules: {

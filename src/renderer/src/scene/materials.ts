@@ -230,6 +230,26 @@ export const materials = {
       emissiveIntensity: 0.6,
     })
   },
+  get screenIdle() {
+    return make('screenIdle', 'charcoal', {
+      roughness: 0.2,
+      emissive: 'screenGlow',
+      emissiveIntensity: 0.25,
+    })
+  },
+  get screenError() {
+    return make('screenError', 'charcoal', {
+      roughness: 0.2,
+      emissive: 'screenError',
+      emissiveIntensity: 1.8,
+    })
+  },
+  get terminalTextDim() {
+    return make('terminalTextDim', 'terminalGreen', {
+      emissive: 'terminalGreen',
+      emissiveIntensity: 0.35,
+    })
+  },
   get terminalText() {
     return make('terminalText', 'terminalGreen', {
       emissive: 'terminalGreen',

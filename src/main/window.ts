@@ -41,6 +41,9 @@ function rendererQuery(): Record<string, string> {
   const env = process.env
   if (env['CUBICLE_SHOWCASE'] === '1') q['showcase'] = '1'
   if (env['CUBICLE_DIAGNOSTICS'] === '1') q['diagnostics'] = '1'
+  if (env['CUBICLE_DEMO'] === '1') q['demo'] = '1'
+  const state = env['CUBICLE_STATE']
+  if (state && /^[A-Z_]{2,32}$/.test(state)) q['state'] = state
   const quality = env['CUBICLE_QUALITY']
   if (quality === 'high' || quality === 'balanced' || quality === 'low') q['quality'] = quality
   return q

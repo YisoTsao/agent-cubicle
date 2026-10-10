@@ -1,5 +1,6 @@
+import { useFrame } from '@react-three/fiber'
 import { useLayoutEffect, useMemo, useRef } from 'react'
-import { Color, InstancedMesh, Matrix4 } from 'three'
+import { Color, Group, InstancedMesh, Matrix4 } from 'three'
 import { PALETTE } from '../../config/render'
 import { materials } from '../materials'
 import { Block, Cyl } from '../primitives'
@@ -10,7 +11,7 @@ import { ROOM } from './Room'
 
 export const TERMINAL = {
   /** Standing spot in front of the terminal console (world x, z). */
-  stand: [1.0, -1.85] as const,
+  stand: [1.0, -1.88] as const,
 }
 
 export const COFFEE_BAR = {
@@ -273,11 +274,20 @@ function CoffeeMachine() {
   )
 }
 
+const CONSOLE = {
+  h: 0.82, // chibi-height standing console
+  z: WALL_Z + 0.3,
+  monitors: [
+    { x: -0.26, yaw: 0.18 },
+    { x: 0.26, yaw: -0.18 },
+  ],
+}
+
 function TerminalConsole() {
   const [sx] = TERMINAL.stand
-  const h = 1.05
+  const { h } = CONSOLE
   return (
-    <group position={[sx, 0, WALL_Z + 0.3]}>
+    <group position={[sx, 0, CONSOLE.z]}>
       <Block
         size={[1.1, 0.05, 0.5]}
         position={[0, h, 0]}
@@ -297,8 +307,8 @@ function TerminalConsole() {
         radius={0.015}
       />
       {/* Dual monitors facing +z (towards the camera side) */}
-      {[-0.26, 0.26].map((x, i) => (
-        <group key={i} position={[x, h + 0.03, -0.08]} rotation={[0, i ? -0.18 : 0.18, 0]}>
+      {CONSOLE.monitors.map(({ x, yaw }) => (
+        <group key={x} position={[x, h + 0.03, -0.08]} rotation={[0, yaw, 0]}>
           <Block
             size={[0.06, 0.2, 0.04]}
             position={[0, 0.1, -0.02]}
@@ -311,10 +321,6 @@ function TerminalConsole() {
             material={materials.charcoal}
             radius={0.012}
           />
-          <mesh position={[0, 0.34, 0.019]} material={materials.terminalScreen}>
-            <planeGeometry args={[0.46, 0.28]} />
-          </mesh>
-          <TerminalLines />
         </group>
       ))}
       <Block
@@ -327,14 +333,54 @@ function TerminalConsole() {
   )
 }
 
-/** A few glowing "code" bars on the terminal screen. */
-function TerminalLines() {
-  const lines = [0.32, 0.18, 0.26, 0.12, 0.3, 0.2]
+/**
+ * Live terminal screens (outside StaticBatch). When `active`, the "code" lines scroll and glow;
+ * otherwise they sit dim.
+ */
+export function TerminalScreens({ active }: { active: boolean }) {
+  const [sx] = TERMINAL.stand
   return (
-    <group position={[-0.2, 0.44, 0.021]}>
-      {lines.map((len, i) => (
-        <mesh key={i} position={[len / 2, -i * 0.038, 0]} material={materials.terminalText}>
-          <planeGeometry args={[len, 0.014]} />
+    <group position={[sx, 0, CONSOLE.z]}>
+      {CONSOLE.monitors.map(({ x, yaw }, i) => (
+        <group key={x} position={[x, CONSOLE.h + 0.03, -0.08]} rotation={[0, yaw, 0]}>
+          <mesh position={[0, 0.34, 0.019]} material={materials.terminalScreen}>
+            <planeGeometry args={[0.46, 0.28]} />
+          </mesh>
+          <TerminalLines active={active} seed={i} />
+        </group>
+      ))}
+    </group>
+  )
+}
+
+const LINE_LENGTHS = [0.32, 0.18, 0.26, 0.12, 0.3, 0.2, 0.24, 0.1, 0.28]
+const VISIBLE_LINES = 6
+
+/** Glowing "code" bars; scrolls by cycling which lengths are shown. */
+function TerminalLines({ active, seed }: { active: boolean; seed: number }) {
+  const group = useRef<Group>(null)
+  const offset = useRef(seed * 3)
+  useFrame((_, delta) => {
+    const g = group.current
+    if (!g || !active) return
+    offset.current += delta * 6
+    const start = Math.floor(offset.current)
+    g.children.forEach((child, i) => {
+      const len = LINE_LENGTHS[(start + i) % LINE_LENGTHS.length]!
+      child.scale.x = len
+      child.position.x = len / 2
+    })
+  })
+  return (
+    <group ref={group} position={[-0.2, 0.44, 0.021]}>
+      {LINE_LENGTHS.slice(0, VISIBLE_LINES).map((len, i) => (
+        <mesh
+          key={i}
+          position={[len / 2, -i * 0.038, 0]}
+          scale={[len, 1, 1]}
+          material={active ? materials.terminalText : materials.terminalTextDim}
+        >
+          <planeGeometry args={[1, 0.014]} />
         </mesh>
       ))}
     </group>

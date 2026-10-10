@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:e2e": "electron-vite build && playwright test",
     "postinstall": "install-electron",
-    "screenshots": "electron-vite build && playwright test -c playwright.visual.config.mts"
+    "screenshots": "electron-vite build && playwright test -c playwright.visual.config.mts",
+    "screenshots:sheet": "cd tests/visual/baseline/states && montage -label %t -pointsize 22 IDLE-closeup.png THINKING-closeup.png READ-closeup.png WRITE-closeup.png EXEC-closeup.png WAITING_APPROVAL-closeup.png COMPLETED-closeup.png ERROR-closeup.png STALE-closeup.png -tile 3x3 -geometry 420x380+6+6 -background \"#f1e5d3\" -resize 50% ../states-contact-sheet.png"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",

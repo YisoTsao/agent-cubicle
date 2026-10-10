@@ -7,14 +7,19 @@ import { Lighting } from './scene/Lighting'
 import { OfficeScene } from './scene/OfficeScene'
 import { useQuality } from './scene/useQuality'
 import { useSettings } from './store/settings'
+import { DevPanel } from './ui/DevPanel'
+import { DevCameraProbe, installDevApi } from './ui/devApi'
 import { DiagnosticsPanel, StatsProbe, type RenderStats } from './ui/Diagnostics'
 
 export function App() {
   const q = useQuality()
   const showDiagnostics = useSettings((s) => s.showDiagnostics)
   const toggleDiagnostics = useSettings((s) => s.toggleDiagnostics)
+  const showcase = useSettings((s) => s.showcase)
   const [stats, setStats] = useState<RenderStats | null>(null)
   const [ready, setReady] = useState(false)
+
+  useEffect(() => (showDiagnostics ? installDevApi() : undefined), [showDiagnostics])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -46,8 +51,10 @@ export function App() {
         </Suspense>
         <Effects />
         <StatsProbe onSample={showDiagnostics ? setStats : noop} />
+        {showDiagnostics && <DevCameraProbe />}
       </Canvas>
       {showDiagnostics && <DiagnosticsPanel stats={stats} />}
+      {showDiagnostics && !showcase && <DevPanel />}
     </main>
   )
 }

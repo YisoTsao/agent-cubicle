@@ -4,7 +4,7 @@
 | ----------------- | --------------------- | --------------------------------- |
 | 0 骨架            | ✅ 完成（2026-10-10） | 見下                              |
 | 1 視覺原型        | ✅ 完成（2026-10-10） | 使用者驗收美術方向                |
-| 2 角色動畫        | 未開始                |                                   |
+| 2 角色動畫        | ✅ 完成（2026-10-10） | 使用者驗收動作                    |
 | 3 狀態機 + 模擬器 | 未開始                |                                   |
 | 4 真實整合        | 未開始                | 先驗證 Claude Code hooks 官方文件 |
 | 5 正式化          | 未開始                |                                   |
@@ -89,3 +89,44 @@
 - 2× High 約 62 FPS，接近下限；Balanced 才是 HiDPI 預設
 
 **驗收**：使用者確認美術方向（2026-10-10）
+
+---
+
+## Phase 2 — 角色動畫（分支 `phase-2-animation`）
+
+**資產決策**：尚無可用的第三方 rigged GLB（SPEC 風險 #2）。保底 Q 版角色升級為真正的骨架角色：
+單一 `SkinnedMesh`（18 骨、剛性蒙皮、頂點色 → 1 draw call）+ 程式撰寫的 `AnimationClip`，
+與未來 GLB 走完全相同的 manifest → `AnimationMixer` → crossfade 管線。換成 GLB 時只需新增 manifest。
+
+**交付**
+
+- `characters/rig/`：`skeleton.ts`（骨架、分層骨骼遮罩）、`chibiRig.ts`（單一 SkinnedMesh、依 agent 配色）、`ik.ts`（雙骨 IK，手部精準落在鍵盤/書/杯子）、`chibiClips.ts`（15 個 clip）
+- `manifest.ts`：角色動畫契約（role → clip、loop/once、fallback 鏈、once 後的 then），`resolveClips` 驗證並回報缺漏
+- `AnimationController.ts`：posture（下半身+脊椎）與 gesture（頭+手臂）兩層獨立 crossfade；同 role 重複請求為 no-op；缺 clip 走 fallback，永不中斷渲染；`dispose()` 釋放 mixer 快取
+- `Locomotion.ts` + `places.ts`：桌 A/桌 B/終端機/咖啡吧/沙發；經 approach 點與中央 hub 走路；速度、轉向速率、單幀時間皆有上限 → 不瞬移
+- `presentation.ts`：資料驅動的狀態對照表（place / gesture / 依姿勢覆寫 / overlay / 螢幕 / 終端機）；手持道具依 gesture 決定（mug、book）
+- 次要動畫：眨眼、呼吸（骨骼縮放，不與 clip 衝突）
+- Overlay：思考泡泡、⚠、紅色 !、✓、?（canvas sprite，全域共用貼圖，進場彈出）；THINKING/STALE 以淡化顯示「推定」
+- 道具連動：桌上螢幕 idle/active/error（紅），終端機 EXEC 時程式碼行捲動發光（從 StaticBatch 移出成 live 元件）
+- Dev 面板（F3）：9 個狀態按鈕 + demo loop；`window.__cubicleDev`（setState / respawn / stats / pose）
+- 啟動參數：`CUBICLE_STATE`、`CUBICLE_DEMO=1`
+
+**測試結果**
+
+- unit 67/67：IK 往返、manifest fallback/循環、controller（分層、no-op、crossfade、once→then、缺 clip、dispose）、所有地點間走路連續性（20 條路線）、中途改道、卡頓夾制、presentation 表完整性
+- e2e 14/14，新增：
+  - WRITE→EXEC→IDLE→READ 三段真實走路：root 單幀位移 ≤ 0.055 m、hips 骨骼單幀位移 < 0.08 m（無瞬移）
+  - 100 次狀態切換 + 10 次 respawn：geometries/textures 不增長。**已做反向驗證**：拿掉 `rig.dispose()` 時測試失敗（74 → 83）
+- visual：9 個狀態 close-up + contact sheet；Phase 1 場景基準已更新
+
+**量測（1920×1080）**：draw calls 143 → **107**（角色由 ~35 mesh 變 1 個 skinned mesh）；Balanced 2× ~108 FPS、High 2× ~63 FPS
+
+**已知限制**
+
+- 角色仍為程式生成 Q 版；正式 GLB 角色（含臉部表情）待資產決策
+- 沙發座深大於 Q 版腿長，採「腿伸直坐」造型
+- 走路路線為手工 waypoint（hub 中轉），非 navmesh；多 agent 互相避讓留待 Phase 4 座位分配時處理
+- `react-hooks/immutability` 規則對 `scene/`、`characters/` 關閉（Three.js 物件本質上是 imperative 的）
+- 視覺基準仍為人工審查，未做像素比對
+
+**驗收**：使用者確認動作方向（2026-10-10）

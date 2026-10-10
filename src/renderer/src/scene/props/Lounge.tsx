@@ -7,7 +7,7 @@ import { ROOM } from './Room'
 
 export const LOUNGE = {
   /** Sofa seat anchor for an idle agent (world x, z). */
-  seat: [-2.15, 1.3] as const,
+  seat: [-2.3, 0.95] as const,
 }
 
 export function Lounge() {
@@ -240,7 +240,7 @@ function CoffeeTable() {
 
 function FloorLamp() {
   return (
-    <group position={[-2.35, 0, 0.0]}>
+    <group position={[-2.45, 0, 0.14]}>
       <Cyl args={[0.16, 0.18, 0.03, 28]} position={[0, 0.015, 0]} material={materials.charcoal} />
       <Cyl args={[0.015, 0.015, 1.45, 12]} position={[0, 0.74, 0]} material={materials.charcoal} />
       <Cyl args={[0.17, 0.25, 0.3, 28]} position={[0, 1.55, 0]} material={materials.lampShade} />

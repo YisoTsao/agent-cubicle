@@ -10,7 +10,7 @@ export const DESK = {
   width: 1.5,
   height: 0.74,
   /** Chair offset from the desk centre along -x; the seated agent faces +x. */
-  seatOffsetX: -0.7,
+  seatOffsetX: -0.64,
 }
 
 export interface WorkstationSpec {
@@ -138,14 +138,35 @@ function Monitor() {
         material={materials.charcoal}
         radius={0.015}
       />
-      <mesh
-        position={[-0.021, 0.38, 0]}
-        rotation={[0, -Math.PI / 2, 0]}
-        material={materials.screen}
-      >
-        <planeGeometry args={[0.56, 0.32]} />
-      </mesh>
     </group>
+  )
+}
+
+const SCREEN_MATERIAL = {
+  idle: () => materials.screenIdle,
+  active: () => materials.screen,
+  error: () => materials.screenError,
+} as const
+
+/**
+ * Live monitor face for a workstation. Rendered outside StaticBatch (which bakes once) so it can
+ * follow the seated agent's state.
+ */
+export function DeskScreen({
+  spec,
+  mode,
+}: {
+  spec: WorkstationSpec
+  mode: keyof typeof SCREEN_MATERIAL
+}) {
+  return (
+    <mesh
+      position={[spec.center[0] + 0.18 - 0.021, DESK.height + 0.38, spec.center[1]]}
+      rotation={[0, -Math.PI / 2, 0]}
+      material={SCREEN_MATERIAL[mode]()}
+    >
+      <planeGeometry args={[0.56, 0.32]} />
+    </mesh>
   )
 }
 
@@ -210,18 +231,18 @@ function Chair() {
     <group position={[DESK.seatOffsetX, 0, 0]}>
       <Block
         size={[0.48, 0.08, 0.48]}
-        position={[0, 0.46, 0]}
+        position={[0, 0.44, 0]}
         material={materials.fabricTerracotta}
         radius={0.035}
       />
       <Block
         size={[0.08, 0.5, 0.44]}
-        position={[-0.22, 0.78, 0]}
+        position={[-0.22, 0.75, 0]}
         rotation={[0, 0, 0.08]}
         material={materials.fabricTerracotta}
         radius={0.035}
       />
-      <Cyl args={[0.025, 0.025, 0.3]} position={[0, 0.27, 0]} material={materials.metal} />
+      <Cyl args={[0.025, 0.025, 0.3]} position={[0, 0.25, 0]} material={materials.metal} />
       {[0, 1, 2, 3, 4].map((i) => {
         const a = (i / 5) * Math.PI * 2
         return (

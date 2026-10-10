@@ -8,11 +8,11 @@
     "dpr": 2
   },
   "stats": {
-    "fps": 61,
-    "drawCalls": 143,
-    "triangles": 229689,
-    "geometries": 85,
-    "textures": 46,
-    "programs": 29
+    "fps": 63,
+    "drawCalls": 107,
+    "triangles": 224617,
+    "geometries": 70,
+    "textures": 47,
+    "programs": 33
   }
 }
