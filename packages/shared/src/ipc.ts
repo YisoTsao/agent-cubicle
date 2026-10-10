@@ -6,6 +6,7 @@ export const IpcChannel = {
   Ping: 'cubicle:ping',
   GetSnapshot: 'cubicle:get-snapshot',
   StateChanged: 'cubicle:state-changed',
+  WindowVisibility: 'cubicle:window-visibility',
   SettingsGet: 'cubicle:settings:get',
   SettingsSet: 'cubicle:settings:set',
   // Integrations (user-facing)
@@ -92,6 +93,8 @@ export interface CubicleApi {
   ping(): Promise<PingResult>
   getSnapshot(): Promise<StateSnapshot>
   onState(callback: (snapshot: StateSnapshot) => void): () => void
+  /** Window hidden/minimized (false) or shown/restored (true); more reliable than the page API. */
+  onWindowVisibility(callback: (visible: boolean) => void): () => void
   settings: CubicleSettingsApi
   integration: CubicleIntegrationApi
   dev: CubicleDevApi

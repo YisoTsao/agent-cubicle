@@ -1,10 +1,12 @@
 import { Bloom, EffectComposer, N8AO, SMAA, Vignette } from '@react-three/postprocessing'
 import type { ReactElement } from 'react'
+import { useSettings } from '../store/settings'
 import { useQuality } from './useQuality'
 
 // Light post-processing: AO grounds furniture, Bloom only catches emissive screens/LEDs.
 export function Effects() {
   const q = useQuality()
+  const cleanCapture = useSettings((s) => s.cleanCapture)
   const passes: ReactElement[] = []
   if (q.ambientOcclusion)
     passes.push(
@@ -27,7 +29,7 @@ export function Effects() {
         luminanceSmoothing={0.15}
       />,
     )
-  passes.push(<Vignette key="vignette" offset={0.35} darkness={0.35} />)
+  if (!cleanCapture) passes.push(<Vignette key="vignette" offset={0.35} darkness={0.35} />)
   if (q.antialias === 'smaa') passes.push(<SMAA key="smaa" />)
 
   return (

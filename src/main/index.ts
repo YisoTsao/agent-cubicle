@@ -12,6 +12,13 @@ process.on('unhandledRejection', (reason) => console.error('[main] unhandledReje
 
 // Tests run with an isolated profile so they never collide with a developer's running instance
 // (the single-instance lock is scoped to the userData directory).
+// Tests/soak run windows that may be covered by other windows; keep them rendering.
+if (process.env['CUBICLE_KEEP_RENDERING'] === '1') {
+  app.commandLine.appendSwitch('disable-renderer-backgrounding')
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
+  app.commandLine.appendSwitch('disable-background-timer-throttling')
+}
+
 const userDataOverride = process.env['CUBICLE_USER_DATA']
 if (userDataOverride) app.setPath('userData', userDataOverride)
 

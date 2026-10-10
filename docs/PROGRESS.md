@@ -245,3 +245,26 @@
 - 未簽章、未公證（需 Apple Developer / Windows 憑證，`release.yml` 已預留）；App 圖示為暫用版本
 - Windows 的 hook 指令依賴 Git Bash + curl（Claude Code on Windows 預設），未在 Windows 實測
 - 走路時角色可能互相穿過（無碰撞避讓）；真實 Claude Code 端到端驗證仍待使用者同意
+
+---
+
+## v1 收尾（分支 `post-v1-polish`）
+
+使用者要求完成所有「尚未做到」的項目並立即以 Claude Code 測試。
+
+| 項目                               | 結果                                                                                                                                                                                                                              |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 真實 Claude Code 驗證              | ✅ `pnpm verify:claude`：隔離的 App + 暫存 settings + `claude --settings <暫存> -p`（不動正式設定）。Claude Code 2.1.296 實測：6 個 hook 事件，角色 IDLE → THINKING → READ → THINKING → COMPLETED → IDLE，名牌顯示 `package.json` |
+| 角色互相穿過                       | ✅ `crowd.ts`：走路時互相推開，迎面相遇各自往右閃；只改繪製位置、不改路線/槽位；平滑、有上限；單元測試                                                                                                                            |
+| 視窗隱藏時停止繪製（Phase 5 缺口） | ✅ e2e 發現 macOS 上 `BrowserWindow.hide()` 不會改 `visibilityState`；改由 main 傳送 hide/minimize/show/restore 事件與頁面可見度合併判斷；新增 e2e（隱藏、最小化皆停止，恢復後繼續）                                              |
+| 測試被其他視窗遮住而停住           | ✅ 測試專用 `CUBICLE_KEEP_RENDERING`（`isolatedEnv` 預設開啟）；正式行為由上一項 e2e 覆蓋                                                                                                                                         |
+| JSONL 監聽在高負載漏事件           | ✅ 輪詢保險再補強：也重新掃描目錄找新檔案                                                                                                                                                                                         |
+| 正式 App 圖示                      | ✅ `pnpm icon`：直接用 App 的 3D 場景渲染（乾淨擷取，無 vignette）合成圓角圖示                                                                                                                                                    |
+| Linux 打包與執行                   | ✅ Mac 上交叉產出 AppImage（128 MB）；linux-arm64 打包版在 Playwright 官方容器 + Xvfb 內通過 smoke test                                                                                                                           |
+| Windows 打包                       | ✅ Mac 上交叉產出 NSIS 安裝檔（113 MB，PE32+ x86-64）；**無法在此實際執行**，待 CI（windows-latest）或實機                                                                                                                        |
+| 簽章 / 公證                        | ⛔ 需要 Apple Developer ID 與 Windows 程式碼簽章憑證（使用者提供）；`release.yml` 已預留 secrets                                                                                                                                  |
+| 推上 GitHub 讓 CI 跑三平台         | ⛔ 需使用者提供／同意遠端 repo（對外動作）                                                                                                                                                                                        |
+
+**測試結果**：unit 215/215、e2e 32/32、packaged smoke：macOS arm64 ✅、Linux arm64（容器）✅、soak 30 分鐘 PASS（Phase 5）
+
+**清理**：Phase 0 測試時遺留的 `pnpm dev` 孤兒程序（埠 5174，執行舊程式碼並占住 userData 的單一實例鎖）已關閉；之後的工具都改用隔離的 userData。

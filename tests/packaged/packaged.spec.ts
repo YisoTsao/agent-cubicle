@@ -9,7 +9,12 @@ import { isolatedEnv } from '../isolatedEnv'
 const ROOT = resolve(__dirname, '../..')
 const EXECUTABLE: Record<string, string> = {
   darwin: join(ROOT, `dist/mac-${process.arch}/AgentCubicle.app/Contents/MacOS/AgentCubicle`),
-  linux: join(ROOT, 'dist/linux-unpacked/agentcubicle'),
+  linux: join(
+    ROOT,
+    process.arch === 'arm64'
+      ? 'dist/linux-arm64-unpacked/agentcubicle'
+      : 'dist/linux-unpacked/agentcubicle',
+  ),
   win32: join(ROOT, 'dist/win-unpacked/AgentCubicle.exe'),
 }
 const exe = EXECUTABLE[process.platform]!
@@ -18,7 +23,9 @@ test.skip(!existsSync(exe), `packaged app not found at ${exe} — run \`pnpm dis
 
 test('packaged app: guards, server and persisted settings', async () => {
   const env = isolatedEnv()
-  const launch = () => electron.launch({ executablePath: exe, env })
+  // Containers running as root need Chromium's --no-sandbox; never used outside such CI runs.
+  const args = (process.env['CUBICLE_TEST_ELECTRON_ARGS'] ?? '').split(' ').filter(Boolean)
+  const launch = () => electron.launch({ executablePath: exe, args, env })
 
   let app = await launch()
   let page = await app.firstWindow()

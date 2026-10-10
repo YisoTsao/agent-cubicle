@@ -1,6 +1,6 @@
 import { watch, type FSWatcher } from 'chokidar'
-import { open, stat } from 'node:fs/promises'
-import { basename, sep } from 'node:path'
+import { open, readdir, stat } from 'node:fs/promises'
+import { basename, join, sep } from 'node:path'
 
 // Tails Claude Code transcripts (~/.claude/projects/<project>/<session>.jsonl) — SPEC §5.2.
 //  - Files present at startup are tailed from their END (history is never replayed); the last
@@ -99,7 +99,20 @@ export class TranscriptWatcher {
     this.enqueue(path)
   }
 
+  /** Safety net: pick up new files and missed appends even if no fs event arrived. */
   private async pollSizes(): Promise<void> {
+    try {
+      for (const project of await readdir(this.opts.root, { withFileTypes: true })) {
+        if (!project.isDirectory()) continue
+        const dir = join(this.opts.root, project.name)
+        for (const name of await readdir(dir).catch(() => [] as string[])) {
+          const path = join(dir, name)
+          if (name.endsWith('.jsonl') && !this.files.has(path)) void this.onAdd(path)
+        }
+      }
+    } catch {
+      // root missing (Claude Code not installed yet): nothing to do
+    }
     for (const [path, f] of this.files) {
       try {
         const { size } = await stat(path)

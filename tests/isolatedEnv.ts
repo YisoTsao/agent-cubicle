@@ -18,6 +18,8 @@ export function isolatedEnv(extra: Record<string, string> = {}): Record<string, 
     CUBICLE_CLAUDE_SETTINGS: join(root, 'claude', 'settings.json'),
     CUBICLE_CLAUDE_PROJECTS: projects,
     CUBICLE_TRANSCRIPTS: 'off',
+    // Test windows may be covered by other windows; don't let occlusion pause them.
+    CUBICLE_KEEP_RENDERING: '1',
     ...extra,
   }
 }

@@ -19,6 +19,7 @@ import { AnimationController } from './AnimationController'
 import { agentDebug } from './debug'
 import { overlayTexture } from './icons'
 import { Locomotion } from './Locomotion'
+import { crowdOffset, removeBody } from './crowd'
 import { claimSlot, releaseAll } from './placeBook'
 import { CHIBI_MANIFEST, resolveClips, type ClipRole } from './manifest'
 import { PLACES, type Place } from './places'
@@ -107,7 +108,10 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
 
   useEffect(() => {
     const id = agent.id
-    return () => releaseAll(id)
+    return () => {
+      releaseAll(id)
+      removeBody(id)
+    }
   }, [agent.id])
 
   useEffect(() => {
@@ -160,7 +164,8 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
     const dt = showcase ? 0 : delta
     const fade = showcase ? 0 : undefined
     loco.update(dt)
-    rig.root.position.set(loco.x, 0, loco.z)
+    const [ox, oz] = crowdOffset(agent.id, loco.x, loco.z, loco.yaw, loco.moving, dt)
+    rig.root.position.set(loco.x + ox, 0, loco.z + oz)
     rig.root.rotation.y = loco.yaw
 
     // Base layers: posture from locomotion, gesture from presentation state.

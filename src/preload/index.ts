@@ -10,6 +10,11 @@ const api: CubicleApi = {
     ipcRenderer.on(IpcChannel.StateChanged, listener)
     return () => ipcRenderer.removeListener(IpcChannel.StateChanged, listener)
   },
+  onWindowVisibility: (callback) => {
+    const listener = (_event: IpcRendererEvent, visible: boolean) => callback(visible === true)
+    ipcRenderer.on(IpcChannel.WindowVisibility, listener)
+    return () => ipcRenderer.removeListener(IpcChannel.WindowVisibility, listener)
+  },
   settings: {
     get: () => ipcRenderer.invoke(IpcChannel.SettingsGet),
     set: (patch) => ipcRenderer.invoke(IpcChannel.SettingsSet, patch),

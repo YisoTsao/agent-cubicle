@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import { BrowserWindow, screen, type Rectangle } from 'electron'
+import { IpcChannel } from '@shared/ipc'
 import type { SettingsStore } from './appSettings'
 import { hardenWebContents } from './security'
 import { SECURE_WEB_PREFERENCES } from './webPreferences'
@@ -28,6 +29,7 @@ export function createMainWindow(settings: SettingsStore): BrowserWindow {
     enableLargerThanScreen: process.env['CUBICLE_SHOWCASE'] === '1',
     webPreferences: {
       ...SECURE_WEB_PREFERENCES,
+      backgroundThrottling: process.env['CUBICLE_KEEP_RENDERING'] !== '1',
       preload: join(__dirname, '../preload/index.js'),
     },
   })
@@ -38,6 +40,13 @@ export function createMainWindow(settings: SettingsStore): BrowserWindow {
     if (!win.isDestroyed() && !win.isMinimized() && !win.isFullScreen())
       settings.update({ bounds: win.getNormalBounds() })
   }
+  const sendVisibility = (visible: boolean) => {
+    if (!win.isDestroyed()) win.webContents.send(IpcChannel.WindowVisibility, visible)
+  }
+  win.on('hide', () => sendVisibility(false))
+  win.on('minimize', () => sendVisibility(false))
+  win.on('show', () => sendVisibility(!win.isMinimized()))
+  win.on('restore', () => sendVisibility(true))
   win.on('resized', saveBounds)
   win.on('moved', saveBounds)
 
@@ -60,6 +69,8 @@ function rendererQuery(): Record<string, string> {
   if (env['CUBICLE_SHOWCASE'] === '1') q['showcase'] = '1'
   if (env['CUBICLE_DIAGNOSTICS'] === '1') q['diagnostics'] = '1'
   if (env['CUBICLE_DEMO'] === '1') q['demo'] = '1'
+  if (env['CUBICLE_KEEP_RENDERING'] === '1') q['keepRendering'] = '1'
+  if (env['CUBICLE_CLEAN_CAPTURE'] === '1') q['cleanCapture'] = '1'
   const state = env['CUBICLE_STATE']
   if (state && /^[A-Z_]{2,32}$/.test(state)) q['state'] = state
   const quality = env['CUBICLE_QUALITY']

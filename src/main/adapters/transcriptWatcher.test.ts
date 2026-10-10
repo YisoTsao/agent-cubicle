@@ -1,10 +1,13 @@
 import { appendFileSync, mkdirSync, mkdtempSync, truncateSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+vi.setConfig({ testTimeout: 15_000 })
 import { TranscriptWatcher } from './transcriptWatcher'
 
-const waitFor = async (cond: () => boolean, ms = 3000) => {
+// Generous: under load fs events can be late; the 2 s poll is the backstop.
+const waitFor = async (cond: () => boolean, ms = 7000) => {
   const end = Date.now() + ms
   while (!cond()) {
     if (Date.now() > end) throw new Error('timeout')

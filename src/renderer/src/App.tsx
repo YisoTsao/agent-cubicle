@@ -31,7 +31,8 @@ export function App() {
   // cap Low quality at 30 FPS. Agent state keeps updating in the main process meanwhile.
   const visible = usePageVisible()
   const capped = q === QUALITY_PRESETS.low
-  const frameloop = !visible && !showcase ? 'never' : capped ? 'demand' : 'always'
+  const keepRendering = useSettings((s) => s.keepRendering)
+  const frameloop = !visible && !showcase && !keepRendering ? 'never' : capped ? 'demand' : 'always'
   useEffect(() => (showDiagnostics ? installDevApi() : undefined), [showDiagnostics])
 
   useEffect(() => {

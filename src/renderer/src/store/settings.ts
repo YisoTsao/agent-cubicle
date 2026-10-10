@@ -7,6 +7,10 @@ interface SettingsState {
   showDiagnostics: boolean
   /** Showcase mode freezes time-based motion so screenshots are reproducible. */
   showcase: boolean
+  /** Never pause when hidden/occluded (tests and soak runs). */
+  keepRendering: boolean
+  /** No vignette: flat edges for compositing (app icon). */
+  cleanCapture: boolean
   setQuality(quality: QualityLevel): void
   setAlwaysOnTop(on: boolean): void
   toggleDiagnostics(): void
@@ -23,6 +27,8 @@ export const useSettings = create<SettingsState>((set) => ({
   alwaysOnTop: false,
   showDiagnostics: params.has('diagnostics'),
   showcase: params.has('showcase'),
+  keepRendering: params.has('keepRendering'),
+  cleanCapture: params.has('cleanCapture'),
   setQuality: (quality) => {
     set({ quality })
     void window.cubicle.settings.set({ quality })

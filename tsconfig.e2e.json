@@ -8,6 +8,8 @@
     "playwright.config.mts",
     "tests/**/*",
     "tools/soak/**/*",
+    "tools/verify/**/*",
+    "tools/icon/**/*",
     "src/preload/*.d.ts",
     "packages/shared/src/**/*"
   ],

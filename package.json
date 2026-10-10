@@ -21,7 +21,9 @@
     "dist": "electron-vite build && electron-builder",
     "dist:dir": "electron-vite build && electron-builder --dir",
     "test:packaged": "playwright test -c playwright.packaged.config.mts",
-    "soak": "tsx tools/soak/run.ts"
+    "soak": "tsx tools/soak/run.ts",
+    "verify:claude": "tsx tools/verify/claude-real.ts",
+    "icon": "tsx tools/icon/render.ts"
   },
   "dependencies": {
     "zod": "^4.6.5"

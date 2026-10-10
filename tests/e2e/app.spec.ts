@@ -71,6 +71,7 @@ test.describe('security checklist (SPEC §8)', () => {
       'getSnapshot',
       'integration',
       'onState',
+      'onWindowVisibility',
       'ping',
       'settings',
     ])

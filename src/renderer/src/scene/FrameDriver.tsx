@@ -11,13 +11,22 @@ export function FrameCap({ fps }: { fps: number }) {
   return null
 }
 
-/** Tracks whether the window is actually visible (minimized / hidden / fully occluded → false). */
+/**
+ * Whether anyone can see the window. Combines the page Visibility API (occlusion, tab-level
+ * hiding) with explicit hide/minimize/restore events from the main process, because
+ * BrowserWindow.hide() does not reliably change document.visibilityState on every platform.
+ */
 export function usePageVisible(): boolean {
-  const [visible, setVisible] = useState(() => document.visibilityState === 'visible')
+  const [pageVisible, setPageVisible] = useState(() => document.visibilityState === 'visible')
+  const [windowVisible, setWindowVisible] = useState(true)
   useEffect(() => {
-    const onChange = () => setVisible(document.visibilityState === 'visible')
+    const onChange = () => setPageVisible(document.visibilityState === 'visible')
     document.addEventListener('visibilitychange', onChange)
-    return () => document.removeEventListener('visibilitychange', onChange)
-  }, [setVisible])
-  return visible
+    const off = window.cubicle.onWindowVisibility(setWindowVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onChange)
+      off()
+    }
+  }, [])
+  return pageVisible && windowVisible
 }

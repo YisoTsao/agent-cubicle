@@ -67,6 +67,8 @@ pnpm test && pnpm test:e2e                 # 單元 + 端到端測試
 pnpm screenshots                           # 固定視角截圖基準
 pnpm dist:dir && pnpm test:packaged        # 打包版 smoke test
 pnpm build && SOAK_MINUTES=30 pnpm soak    # 長時間穩定性測試
+pnpm build && pnpm verify:claude           # 用真實 Claude Code 驗證（暫存 settings，少量額度）
+pnpm build && pnpm icon                    # 從 3D 場景重新產生 App 圖示
 ```
 
 架構與規格：[docs/SPEC.md](docs/SPEC.md)；進度與量測：[docs/PROGRESS.md](docs/PROGRESS.md)。
