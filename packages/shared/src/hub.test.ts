@@ -122,7 +122,11 @@ describe('reducer rules (SPEC §4)', () => {
   })
 
   it('silence while ACTIVE → STALE (not IDLE, not success); STALE → IDLE later', () => {
-    const { send, state, tick } = setup({ staleAfterMs: 90_000, idleAfterStaleMs: 300_000 })
+    const { send, state, tick } = setup({
+      staleAfterMs: 90_000,
+      staleAfterToolMs: 90_000,
+      idleAfterStaleMs: 300_000,
+    })
     send('TOOL_STARTED', { toolKind: 'WRITE' })
     tick(89_000)
     expect(state()?.presence).toBe('ACTIVE')
@@ -134,8 +138,36 @@ describe('reducer rules (SPEC §4)', () => {
     expect(state()?.presence).toBe('IDLE')
   })
 
+  it('opening Claude Code and doing nothing stays IDLE (sofa), never "?"', () => {
+    const { send, state, tick } = setup()
+    send('SESSION_STARTED')
+    expect(state()).toMatchObject({ presence: 'IDLE', activity: 'NONE' })
+    tick(20 * 60_000)
+    expect(state()).toMatchObject({ presence: 'IDLE' })
+  })
+
+  it('a running tool gets the long timeout; plain silence the short one', () => {
+    const { send, state, tick } = setup({ staleAfterMs: 60_000, staleAfterToolMs: 600_000 })
+    send('TOOL_STARTED', { toolKind: 'EXEC', detail: 'a.sh' })
+    tick(300_000) // a 5-minute build: still running, not "?"
+    expect(state()).toMatchObject({ presence: 'ACTIVE', activity: 'EXEC' })
+    tick(301_000)
+    expect(state()?.presence).toBe('STALE')
+    send('TOOL_COMPLETED') // resumes, then the tool is done → short timeout again
+    tick(61_000)
+    expect(state()?.presence).toBe('STALE')
+  })
+
+  it('each tool call replaces the name-tag detail (no leftovers)', () => {
+    const { send, state } = setup()
+    send('TOOL_STARTED', { toolKind: 'READ', detail: 'src/a.ts' })
+    expect(state()?.detail).toBe('a.ts')
+    send('TOOL_STARTED', { toolKind: 'SEARCH' }) // READ → READ, but no file
+    expect(state()?.detail).toBeUndefined()
+  })
+
   it('a STALE session resumes its activity when it speaks again', () => {
-    const { send, state, tick } = setup({ staleAfterMs: 1_000 })
+    const { send, state, tick } = setup({ staleAfterMs: 1_000, staleAfterToolMs: 1_000 })
     send('TOOL_STARTED', { toolKind: 'EXEC' })
     tick(2_000)
     expect(state()?.presence).toBe('STALE')
@@ -217,7 +249,11 @@ describe('ingestion (dedupe, ordering, validation)', () => {
   })
 
   it('removes IDLE sessions that went silent (closed without SESSION_ENDED)', () => {
-    const { hub, send, tick } = setup({ idleExpireMs: 60_000, staleAfterMs: 30_000 })
+    const { hub, send, tick } = setup({
+      idleExpireMs: 60_000,
+      staleAfterMs: 30_000,
+      staleAfterToolMs: 30_000,
+    })
     send('SESSION_STARTED', { sessionId: 'quiet' })
     send('TASK_STARTED', { sessionId: 'busy' })
     tick(59_000)

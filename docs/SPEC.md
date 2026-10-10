@@ -103,7 +103,7 @@ interface SessionState {
 - TOOL_STARTED → ACTIVE + Activity(toolKind)；TOOL_COMPLETED(success) → ACTIVE/THINKING(推定)；失敗的單次工具 ≠ TASK_FAILED（短暫 hiccup，不進 ERROR）
 - APPROVAL_REQUIRED → WAITING_APPROVAL，**黏著**直到收到下一個 TOOL_STARTED/TOOL_COMPLETED/TASK_*/SESSION_ENDED
 - TASK_COMPLETED → COMPLETED（播放 ~3s 慶祝）→ IDLE；TASK_FAILED → ERROR 黏著直到新 TASK_STARTED
-- 無事件逾時：ACTIVE 超過 N 秒（預設 90s，可設）→ STALE（顯示「?」，**不**回 IDLE、不宣告成功）；STALE 超過 M 分鐘 → IDLE；WAITING_APPROVAL 不逾時
+- 無事件逾時：ACTIVE 超過 N 秒（預設 3 分鐘；有工具執行中、尚未收到完成事件時為 15 分鐘，避免長時間 build/test 被當成失聯；皆可設）→ STALE（顯示「?」，**不**回 IDLE、不宣告成功）；STALE 超過 M 分鐘 → IDLE；WAITING_APPROVAL 不逾時
 - 亂序/重複：以 `(sessionId, sequence|timestamp)` 排序、`eventId` LRU 去重；過舊事件（早於 session 當前狀態 since）忽略
 - 無法辨識事件：記診斷 log、**保留最後有效狀態**，不假設 IDLE
 - App 啟動：不重播歷史；JSONL 僅從檔尾開始 tail，並用檔案 mtime 判斷近期活躍 session
@@ -153,7 +153,7 @@ interface SessionState {
 | ERROR            | confused              | 紅色螢幕       |
 | STALE            | idle + 「?」          | 淡化           |
 
-- **多 Agent**：每個 `(agentId, sessionId)` 一個角色；座位由 `SeatAllocator` 分配（固定偏好 agent→座位、滿座時排隊站立/顯示溢位計數、SESSION_ENDED 後延遲釋放）；角色外觀依 agentId 區分（配色/名牌）；名牌顯示 agentName + 簡短 detail。
+- **多 Agent**：每個 `(agentId, sessionId)` 一個角色；座位由 `SeatAllocator` 分配（固定偏好 agent→座位、滿座時排隊站立/顯示溢位計數、SESSION_ENDED 後延遲釋放）；角色外觀依 agentId 區分（配色/名牌）；名牌顯示 agentName + 簡短 detail（只有檔名／資料夾名；指令、搜尋字串、URL、任務描述一律不顯示）。
 - **生命週期**：角色/材質/貼圖/clip 以 ref-count 快取；移除角色時 `mixer.stopAllAction()`、`uncacheRoot`，並對 geometry/material/texture `dispose()`；GLB 以 drei `useGLTF` 非同步載入 + 進度 + 失敗 fallback（程式生成的簡易人形，Phase 1 即作為保底）。
 
 ## 8. Electron 視窗與安全

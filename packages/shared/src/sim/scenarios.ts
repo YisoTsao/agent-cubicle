@@ -158,7 +158,7 @@ export const SCENARIOS: Scenario[] = [
     description:
       'Events stop mid-task: ACTIVE → STALE ("?"), never a fake success; resumes on next event',
     agents: { main: CLAUDE },
-    hubConfig: { staleAfterMs: 8_000, idleAfterStaleMs: 30_000 },
+    hubConfig: { staleAfterMs: 8_000, staleAfterToolMs: 8_000, idleAfterStaleMs: 30_000 },
     steps: [
       { at: 0, type: 'SESSION_STARTED' },
       { at: 300, type: 'TASK_STARTED' },

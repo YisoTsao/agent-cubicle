@@ -6,6 +6,11 @@ import type { Activity, AgentEvent, Presence, SessionState, ToolKind } from './e
 export interface ReducerConfig {
   /** ACTIVE with no events for this long → STALE (never IDLE, never "success"). */
   staleAfterMs: number
+  /**
+   * Same, but while a tool call is in flight (TOOL_STARTED seen, no TOOL_COMPLETED yet). A long
+   * build or test run emits nothing for minutes and must not look abandoned.
+   */
+  staleAfterToolMs: number
   /** STALE for this long → IDLE. */
   idleAfterStaleMs: number
   /** COMPLETED is shown this long before relaxing to IDLE. */
@@ -13,7 +18,8 @@ export interface ReducerConfig {
 }
 
 export const DEFAULT_REDUCER_CONFIG: ReducerConfig = {
-  staleAfterMs: 90_000,
+  staleAfterMs: 3 * 60_000,
+  staleAfterToolMs: 15 * 60_000,
   idleAfterStaleMs: 5 * 60_000,
   completedHoldMs: 3_000,
 }
@@ -24,6 +30,8 @@ export interface SessionRecord extends SessionState {
   /** Presence/activity before going STALE, restored when the session speaks again. */
   beforeStale?: { presence: Presence; activity: Activity; inferred: boolean }
   endedAt?: number
+  /** A tool call has started and not completed (selects the longer stale timeout). */
+  toolOpen?: boolean
 }
 
 const ACTIVITY_FOR_TOOL: Record<ToolKind, { activity: Activity; inferred: boolean }> = {
@@ -63,7 +71,16 @@ function set(
   return next
 }
 
-const thinking = (s: SessionRecord, at: number) => set(s, at, 'ACTIVE', 'THINKING', true)
+const thinking = (s: SessionRecord, at: number) => {
+  const next = set(s, at, 'ACTIVE', 'THINKING', true)
+  delete next.toolOpen
+  return next
+}
+
+function settled(s: SessionRecord): SessionRecord {
+  delete s.toolOpen
+  return s
+}
 
 /** Events that end a WAITING_APPROVAL (anything that proves the agent moved on). */
 const RELEASES_APPROVAL = new Set<AgentEvent['type']>([
@@ -104,7 +121,11 @@ export function reduceSession(prev: SessionRecord, event: AgentEvent): SessionRe
     case 'TOOL_STARTED': {
       const kind = event.toolKind ?? 'OTHER'
       const { activity, inferred } = ACTIVITY_FOR_TOOL[kind]
-      return set(s, at, 'ACTIVE', activity, inferred, event.detail)
+      const started = set(s, at, 'ACTIVE', activity, inferred, event.detail)
+      // Each tool call owns the tag: never keep the previous tool's file name.
+      if (event.detail === undefined) delete started.detail
+      started.toolOpen = true
+      return started
     }
     case 'TOOL_COMPLETED':
       // A failed tool is a hiccup, not a failed task: the agent will usually react to it.
@@ -112,11 +133,11 @@ export function reduceSession(prev: SessionRecord, event: AgentEvent): SessionRe
     case 'APPROVAL_REQUIRED':
       return set(s, at, 'WAITING_APPROVAL', s.activity, s.inferred, event.detail ?? s.detail)
     case 'TASK_COMPLETED':
-      return set(s, at, 'COMPLETED', 'NONE', false)
+      return settled(set(s, at, 'COMPLETED', 'NONE', false))
     case 'TASK_FAILED':
-      return set(s, at, 'ERROR', 'NONE', false, event.detail)
+      return settled(set(s, at, 'ERROR', 'NONE', false, event.detail))
     case 'SESSION_ENDED': {
-      const ended = set(s, at, 'IDLE', 'NONE', false)
+      const ended = settled(set(s, at, 'IDLE', 'NONE', false))
       ended.endedAt = at
       return ended
     }
@@ -130,7 +151,7 @@ export function tickSession(s: SessionRecord, now: number, cfg: ReducerConfig): 
   const silentFor = now - s.lastEventAt
   switch (s.presence) {
     case 'ACTIVE':
-      if (silentFor >= cfg.staleAfterMs) {
+      if (silentFor >= (s.toolOpen ? cfg.staleAfterToolMs : cfg.staleAfterMs)) {
         const stale: SessionRecord = {
           ...s,
           presence: 'STALE',
@@ -158,6 +179,6 @@ export function tickSession(s: SessionRecord, now: number, cfg: ReducerConfig): 
 
 /** Strip internal bookkeeping before sending to the renderer. */
 export function toPublic(s: SessionRecord): SessionState {
-  const { lastSequence: _seq, beforeStale: _bs, endedAt: _end, ...pub } = s
+  const { lastSequence: _seq, beforeStale: _bs, endedAt: _end, toolOpen: _to, ...pub } = s
   return pub
 }

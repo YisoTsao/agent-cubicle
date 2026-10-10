@@ -32,26 +32,15 @@ const str = (v: unknown): string | undefined =>
   typeof v === 'string' && v.length > 0 ? v : undefined
 
 /**
- * The most useful one-line description of a tool call. Never includes file contents or prompts;
- * paths are reduced to basenames later by the hub (SPEC §8).
+ * The one-line description shown on the name tag: a file or folder name, nothing else. Commands,
+ * search patterns, URLs and task descriptions are terminal-like text that clutters the tag (and
+ * may hold secrets), so they are never shown. Paths are reduced to basenames later by the hub
+ * (SPEC §8); file contents and prompts are never read.
  */
-export function toolDetail(toolName: string, input: unknown): string | undefined {
+export function toolDetail(_toolName: string, input: unknown): string | undefined {
   if (!input || typeof input !== 'object') return undefined
   const i = input as Record<string, unknown>
-  const raw =
-    str(i['file_path']) ??
-    str(i['notebook_path']) ??
-    str(i['path']) ??
-    str(i['pattern']) ??
-    str(i['query']) ??
-    str(i['url']) ??
-    (toolName === 'Bash' || toolName === 'PowerShell' ? firstLine(str(i['command'])) : undefined) ??
-    str(i['description'])
-  return raw?.slice(0, 120)
-}
-
-function firstLine(s: string | undefined): string | undefined {
-  return s?.split('\n')[0]?.trim() || undefined
+  return (str(i['file_path']) ?? str(i['notebook_path']) ?? str(i['path']))?.slice(0, 120)
 }
 
 /** "Claude Code · project" — tells parallel sessions apart on the name tag. */

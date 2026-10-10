@@ -57,7 +57,8 @@ describe('Claude hook adapter', () => {
         tool_input: { command: 'pnpm test\necho hi' },
       }),
     )
-    expect(e).toMatchObject({ toolName: 'Bash', toolKind: 'EXEC', detail: 'pnpm test' })
+    expect(e).toMatchObject({ toolName: 'Bash', toolKind: 'EXEC' })
+    expect(e).not.toHaveProperty('detail') // commands never reach the name tag
   })
 
   it('ignores non-permission notifications and unknown hooks', () => {
@@ -94,9 +95,12 @@ describe('Claude tool helpers', () => {
 
   it('picks the most useful detail field and never file contents', () => {
     expect(toolDetail('Write', { file_path: '/p/a.ts', content: 'SECRET' })).toBe('/p/a.ts')
-    expect(toolDetail('Grep', { pattern: 'useAgents' })).toBe('useAgents')
-    expect(toolDetail('WebFetch', { url: 'https://x.dev', prompt: 'p' })).toBe('https://x.dev')
-    expect(toolDetail('Task', { description: 'Find bugs', prompt: 'long' })).toBe('Find bugs')
+    // Only file / folder names are shown; commands, patterns, URLs and descriptions never are.
+    expect(toolDetail('Bash', { command: 'rm -rf dist', description: 'clean' })).toBeUndefined()
+    expect(toolDetail('Grep', { pattern: 'useAgents' })).toBeUndefined()
+    expect(toolDetail('Grep', { pattern: 'x', path: '/p/src' })).toBe('/p/src')
+    expect(toolDetail('WebFetch', { url: 'https://x.dev', prompt: 'p' })).toBeUndefined()
+    expect(toolDetail('Task', { description: 'Find bugs', prompt: 'long' })).toBeUndefined()
     expect(toolDetail('Read', null)).toBeUndefined()
   })
 
