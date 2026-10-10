@@ -1,13 +1,13 @@
 # PROGRESS
 
-| Phase             | 狀態                  | 備註                              |
-| ----------------- | --------------------- | --------------------------------- |
-| 0 骨架            | ✅ 完成（2026-10-10） | 見下                              |
-| 1 視覺原型        | ✅ 完成（2026-10-10） | 使用者驗收美術方向                |
-| 2 角色動畫        | ✅ 完成（2026-10-10） | 使用者驗收動作                    |
-| 3 狀態機 + 模擬器 | 未開始                |                                   |
-| 4 真實整合        | 未開始                | 先驗證 Claude Code hooks 官方文件 |
-| 5 正式化          | 未開始                |                                   |
+| Phase             | 狀態                  | 備註                                               |
+| ----------------- | --------------------- | -------------------------------------------------- |
+| 0 骨架            | ✅ 完成（2026-10-10） | 見下                                               |
+| 1 視覺原型        | ✅ 完成（2026-10-10） | 使用者驗收美術方向                                 |
+| 2 角色動畫        | ✅ 完成（2026-10-10） | 使用者驗收動作                                     |
+| 3 狀態機 + 模擬器 | 🟡 待使用者審查       | 截圖：tests/visual/baseline/live-multi-session.png |
+| 4 真實整合        | 未開始                | 先驗證 Claude Code hooks 官方文件                  |
+| 5 正式化          | 未開始                |                                                    |
 
 每階段完成後補：測試結果 / 已知限制 / 待辦。
 
@@ -130,3 +130,41 @@
 - 視覺基準仍為人工審查，未做像素比對
 
 **驗收**：使用者確認動作方向（2026-10-10）
+
+---
+
+## Phase 3 — 狀態機 + 模擬器（分支 `phase-3-state-machine`）
+
+**交付**
+
+- `packages/shared/src/reducer.ts`：純函式 session 狀態機（SPEC §4）
+  - TOOL_STARTED → ACTIVE + 工具活動（READ/SEARCH→READ、WRITE、EXEC；未知工具 → 推定 THINKING）
+  - TOOL_COMPLETED → 推定 THINKING；**單一工具失敗 ≠ 任務失敗**
+  - WAITING_APPROVAL 黏著，只有工具/任務/結束事件能解除；HEARTBEAT 不行；**永不逾時**
+  - ERROR 黏著直到新的 TASK_STARTED；COMPLETED 顯示 3 秒後回 IDLE
+  - ACTIVE 靜默 90 秒 → STALE（保留原活動，**不**回 IDLE、不當作成功）；STALE 5 分鐘 → IDLE；STALE 收到任何事件即恢復
+- `packages/shared/src/hub.ts`：`EventHub`（時鐘注入、無計時器，main 與測試行為一致）
+  - zod 驗證（壞資料不拋錯、不改狀態、記入診斷）、eventId 去重（LRU 2000）、依 sequence（無則 timestamp）丟棄過舊事件
+  - 座位分配：穩定、不搬動已就座者；結束的 session 停留 15 秒才釋放座位；超額顯示 overflow
+  - `detail` 預設只保留檔名（`cat /Users/me/x/a.txt` → `cat a.txt`）
+- 模擬器：6 個情境（normal-task、approval、failure-recovery、out-of-order、disconnect、multi-session），純資料 + `expandScenario`
+- Main：`HubService`（500 ms tick、合併推送快照、情境執行器），開發用 IPC（列表/執行/重設/診斷，**打包版拒絕**，參數以 zod 驗證），`CUBICLE_SIMULATE=<name>[@speed]`
+- Renderer：IPC 快照 → `toPresentation` → 角色；agent 依 id 固定配色；名牌（名稱 + 目前檔案）；live / manual 兩種來源
+- **換地點防抖 1 秒**＋走路 1.05 → 1.5 m/s：短工具呼叫不會讓角色來回奔走（測試中發現的實際體驗問題）
+- Dev 面板改版：情境 + 速度、manual 狀態、agent 列表、hub 診斷計數
+- `pnpm sim list | print <name> [--speed N]`：輸出 NDJSON 時間軸（Phase 4 加 `--post`）
+
+**測試結果**
+
+- unit 112/112：每條 §4 規則一個測試、ingestion（無效/重複/亂序/timestamp 後備/session 獨立/座位/路徑去敏）、6 個情境以假時鐘完整播放並比對狀態序列、`toPresentation` 對照
+- e2e 19/19，新增 5 項：normal-task 依序經過 THINKING→READ→WRITE→EXEC→COMPLETED→IDLE 且角色實際走到終端機與沙發；approval 黏著後恢復；multi-session 兩桌兩名牌互不覆蓋；out-of-order 角色從未出現遲到的 READ；開發用 IPC 拒絕非法參數
+- Phase 0 安全測試同步更新（bridge 多一個 `dev` 命名空間，由 main 端把關）
+
+**已知限制**
+
+- 沒有座位的 session（第 3 個以上）目前只計數、不畫角色；排隊/站立顯示留到 Phase 4
+- 名牌用 drei `<Html>`（DOM），多 agent 時效能可接受，數量很大時再考慮改 sprite
+- 系統休眠喚醒後所有 ACTIVE session 會立即判定 STALE（符合規則，但 Phase 5 再評估是否放寬）
+- CLI 尚不能推送事件（等 Phase 4 的本機 server）
+
+**驗收**：使用者確認（2026-10-10）

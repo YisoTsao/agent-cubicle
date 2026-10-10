@@ -9,6 +9,7 @@
     "vitest.config.mts",
     "src/main/**/*",
     "src/preload/**/*",
-    "packages/shared/src/**/*"
+    "packages/shared/src/**/*",
+    "tools/**/*"
   ]
 }

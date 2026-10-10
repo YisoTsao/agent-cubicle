@@ -3,7 +3,7 @@ import { HUB, PLACES, type Place, type XZ } from './places'
 // Moves a character between places along simple waypoint routes with bounded speed and turn
 // rate, so position and facing are always continuous (SPEC §7 — no teleporting).
 
-export const WALK_SPEED = 1.05 // m/s
+export const WALK_SPEED = 1.5 // m/s — brisk: tool calls are short, walks must be too
 export const TURN_RATE = 7 // rad/s
 /** Frame-time clamp: a long hitch must not turn into a visible jump. */
 export const MAX_DT = 1 / 20

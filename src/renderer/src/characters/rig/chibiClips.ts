@@ -150,7 +150,8 @@ const stand = () =>
     }
   })
 
-export const WALK_CYCLE = 0.72
+/** Stride period, matched to WALK_SPEED so feet don't skate (~0.78 m per cycle). */
+export const WALK_CYCLE = 0.52
 
 const walk = () =>
   sample('walk', WALK_CYCLE, 30, (t) => {

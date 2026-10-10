@@ -86,15 +86,15 @@ async function sampleUntilSettled(timeoutMs: number): Promise<Pose[]> {
         const out: Pose[] = []
         const start = performance.now()
         let settledFrames = 0
+        let moved = false
         const tick = () => {
           const p = dev.pose(id as string)
           out.push(p)
+          moved ||= p.moving
           settledFrames = p.moving ? 0 : settledFrames + 1
-          // Wait past the sit-down cross-fade before declaring the transition finished.
-          if (
-            (out.length > 30 && settledFrames > 45) ||
-            performance.now() - start > (timeout as number)
-          )
+          // Place changes are debounced: wait for the walk to start, then past the sit-down
+          // cross-fade, before declaring the transition finished.
+          if ((moved && settledFrames > 45) || performance.now() - start > (timeout as number))
             done(out)
           else requestAnimationFrame(tick)
         }
@@ -139,10 +139,10 @@ for (const [from, to, place] of [
     expect(samples.some((s) => s.posture === 'walk')).toBe(true)
 
     const step = maxSteps(samples)
-    // Root: bounded by walk speed × clamped frame time (1.05 m/s × 1/20 s ≈ 0.053 m).
-    expect(step.root).toBeLessThanOrEqual(0.055)
+    // Root: bounded by walk speed × clamped frame time (1.5 m/s × 1/20 s = 0.075 m).
+    expect(step.root).toBeLessThanOrEqual(0.076)
     // Hips (root motion + posture cross-fades): any snap between poses would exceed this.
-    expect(step.hips).toBeLessThan(0.08)
+    expect(step.hips).toBeLessThan(0.1)
   })
 }
 

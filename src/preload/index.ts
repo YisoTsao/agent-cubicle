@@ -10,6 +10,13 @@ const api: CubicleApi = {
     ipcRenderer.on(IpcChannel.StateChanged, listener)
     return () => ipcRenderer.removeListener(IpcChannel.StateChanged, listener)
   },
+  // Main rejects these in packaged builds; exposing the functions grants nothing by itself.
+  dev: {
+    listScenarios: () => ipcRenderer.invoke(IpcChannel.DevListScenarios),
+    runScenario: (name, speed) => ipcRenderer.invoke(IpcChannel.DevRunScenario, name, speed),
+    reset: () => ipcRenderer.invoke(IpcChannel.DevReset),
+    diagnostics: () => ipcRenderer.invoke(IpcChannel.DevDiagnostics),
+  },
 }
 
 contextBridge.exposeInMainWorld('cubicle', api)

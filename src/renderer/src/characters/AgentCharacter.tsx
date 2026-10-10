@@ -1,3 +1,4 @@
+import { Html } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import {
@@ -49,12 +50,18 @@ const IDLE_FOR_POSTURE: Record<Place['posture'], ClipRole> = {
   stand: 'stand_idle',
 }
 
-const OVERLAY_HEIGHT = 0.5
+/** Heights above the head bone: name tag just over the hair, status icon above the tag. */
+const TAG_HEIGHT = 0.52
+const OVERLAY_HEIGHT = 0.78
 const OVERLAY_SIZE = 0.34
+
+/** A new state must hold this long before the character walks somewhere else. */
+export const PLACE_DEBOUNCE_MS = 1000
 
 export function AgentCharacter({ agent }: { agent: AgentView }) {
   const showcase = useSettings((s) => s.showcase)
   const overlayRef = useRef<Sprite>(null)
+  const tagRef = useRef<Group>(null)
 
   const rig = useMemo(() => buildChibiRig(agent.style), [agent.style])
   const controller = useMemo(
@@ -75,6 +82,8 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
 
   // Per-state-entry bookkeeping (refs: mutated every frame, never rendered).
   const onceDone = useRef(false)
+  /** State whose gesture is shown (lags agent.state while a place change is debounced). */
+  const committed = useRef(agent.state)
   const overlayPop = useRef(0)
 
   useEffect(() => {
@@ -95,12 +104,24 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
   }, [props, overlayMaterial])
 
   // React to state changes: pick the target place and walk (or snap, in showcase mode).
+  // React to state changes. Changing *place* is debounced: real tool calls are often shorter
+  // than the walk, and a character pacing back and forth reads as noise. Until the move is
+  // committed the previous gesture keeps playing; overlays and screens update immediately.
   useLayoutEffect(() => {
-    onceDone.current = false
     overlayPop.current = 0
     const target = placeById(placeIdFor(agent.state, agent.deskId, loco.place.id))
-    if (showcase) loco.teleport(target)
-    else loco.goTo(target)
+    const commit = () => {
+      committed.current = agent.state
+      onceDone.current = false
+      if (showcase) loco.teleport(target)
+      else loco.goTo(target)
+    }
+    if (showcase || target.id === loco.place.id) {
+      commit()
+      return
+    }
+    const timer = setTimeout(commit, PLACE_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
   }, [agent.state, agent.deskId, loco, showcase])
 
   useEffect(() => {
@@ -129,7 +150,9 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
     // Base layers: posture from locomotion, gesture from presentation state.
     const settledPosture = loco.place.posture
     const posture: ClipRole = loco.moving ? 'walk' : settledPosture
-    let gesture: ClipRole = loco.moving ? 'walk_arms' : gestureFor(agent.state, settledPosture)
+    let gesture: ClipRole = loco.moving
+      ? 'walk_arms'
+      : gestureFor(committed.current, settledPosture)
     if (CHIBI_MANIFEST.clips[gesture].loop === 'once' && onceDone.current) {
       gesture = IDLE_FOR_POSTURE[settledPosture]
     }
@@ -178,6 +201,11 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
         overlay.scale.setScalar(OVERLAY_SIZE * pop)
       }
     }
+
+    if (tagRef.current) {
+      rig.bones.head.getWorldPosition(scratch.v)
+      tagRef.current.position.set(scratch.v.x, scratch.v.y + TAG_HEIGHT, scratch.v.z)
+    }
   })
 
   return (
@@ -186,6 +214,14 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
       <primitive object={props.mug} />
       <primitive object={props.book} />
       <sprite ref={overlayRef} material={overlayMaterial} renderOrder={10} visible={false} />
+      <group ref={tagRef}>
+        <Html center zIndexRange={[10, 0]} className="name-tag-anchor">
+          <div className="name-tag" data-testid="name-tag">
+            {agent.name}
+            {agent.detail && <span className="name-tag__detail">{agent.detail}</span>}
+          </div>
+        </Html>
+      </group>
     </>
   )
 }

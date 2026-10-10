@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from 'electron'
-import type { StateSnapshot } from '@shared/ipc'
-import { registerIpcHandlers } from './ipc'
+import { HubService } from './hubService'
+import { devToolsEnabled, registerIpcHandlers } from './ipc'
 import { hardenSession } from './security'
 import { createMainWindow } from './window'
 
@@ -18,8 +18,8 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   let mainWindow: BrowserWindow | null = null
 
-  // Phase 3 replaces this with the Event Hub's authoritative session state.
-  const snapshot: StateSnapshot = { sessions: [] }
+  // Authoritative agent state lives here (SPEC §3); renderers only receive snapshots.
+  const hub = new HubService()
 
   app.on('second-instance', () => {
     if (!mainWindow) return
@@ -29,8 +29,10 @@ if (!app.requestSingleInstanceLock()) {
 
   void app.whenReady().then(() => {
     hardenSession()
-    registerIpcHandlers(() => snapshot)
+    registerIpcHandlers(hub)
+    hub.start()
     mainWindow = createMainWindow()
+    autoSimulate(hub)
     mainWindow.on('closed', () => (mainWindow = null))
 
     app.on('activate', () => {
@@ -38,7 +40,21 @@ if (!app.requestSingleInstanceLock()) {
     })
   })
 
+  app.on('before-quit', () => hub.stop())
+
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()
   })
+}
+
+/** `CUBICLE_SIMULATE=<scenario>[@speed]` plays a scenario on startup (dev demos and e2e). */
+function autoSimulate(hub: HubService): void {
+  const spec = process.env['CUBICLE_SIMULATE']
+  if (!spec || !devToolsEnabled()) return
+  const [name, speed] = spec.split('@')
+  try {
+    hub.runScenario(name!, speed ? Number(speed) : 1)
+  } catch (err) {
+    console.error('[main] CUBICLE_SIMULATE failed', err)
+  }
 }

@@ -65,7 +65,7 @@ test.describe('security checklist (SPEC §8)', () => {
     }))
     expect(env.require).toBe('undefined')
     expect(env.process).toBe('undefined')
-    expect(env.bridgeKeys).toEqual(['getSnapshot', 'onState', 'ping'])
+    expect(env.bridgeKeys).toEqual(['dev', 'getSnapshot', 'onState', 'ping'])
   })
 
   test('CSP meta is present and strict in production build', async () => {

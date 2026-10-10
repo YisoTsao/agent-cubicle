@@ -9,6 +9,7 @@ import type { RenderStats } from './Diagnostics'
 // Test/diagnostics hooks on window.__cubicleDev (installed only when diagnostics are enabled).
 
 export interface CubicleDevApi {
+  agents(): { id: string; name: string; state: string; deskId: string }[]
   setState(agentId: string, state: PresentationState): void
   respawn(): void
   stats(): RenderStats | null
@@ -45,6 +46,10 @@ export function DevCameraProbe() {
 export function installDevApi(): () => void {
   const v = new Vector3()
   const api: CubicleDevApi = {
+    agents: () =>
+      useAgents
+        .getState()
+        .agents.map(({ id, name, state, deskId }) => ({ id, name, state, deskId })),
     setState: (id, state) => useAgents.getState().setState(id, state),
     respawn: () => useAgents.getState().respawn(),
     stats: () => (window as unknown as { __cubicleStats?: RenderStats }).__cubicleStats ?? null,

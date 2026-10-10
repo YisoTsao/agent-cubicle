@@ -9,10 +9,10 @@
   },
   "stats": {
     "fps": 120,
-    "drawCalls": 107,
-    "triangles": 224617,
-    "geometries": 70,
-    "textures": 47,
-    "programs": 33
+    "drawCalls": 105,
+    "triangles": 205337,
+    "geometries": 69,
+    "textures": 46,
+    "programs": 29
   }
 }

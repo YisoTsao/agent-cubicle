@@ -74,7 +74,49 @@ body,
   color: #2b2220;
 }
 
-.dev-panel__demo {
-  display: block;
+.dev-panel {
+  max-width: 340px;
+}
+
+.dev-panel__title {
+  margin-top: 8px;
+}
+
+.dev-panel__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
   margin-top: 6px;
+}
+
+.dev-panel__list {
+  margin: 4px 0;
+  padding-left: 16px;
+}
+
+.muted {
+  opacity: 0.6;
+}
+
+.name-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgb(255 250 242 / 88%);
+  box-shadow: 0 1px 4px rgb(60 40 20 / 25%);
+  color: #3b3127;
+  font:
+    600 11px/1.4 system-ui,
+    -apple-system,
+    'PingFang TC',
+    sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+.name-tag__detail {
+  margin-left: 4px;
+  opacity: 0.6;
+  font-weight: 500;
 }

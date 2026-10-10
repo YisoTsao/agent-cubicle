@@ -6,6 +6,7 @@ import { IsoCamera } from './scene/IsoCamera'
 import { Lighting } from './scene/Lighting'
 import { OfficeScene } from './scene/OfficeScene'
 import { useQuality } from './scene/useQuality'
+import { connectAgents } from './store/agents'
 import { useSettings } from './store/settings'
 import { DevPanel } from './ui/DevPanel'
 import { DevCameraProbe, installDevApi } from './ui/devApi'
@@ -19,6 +20,7 @@ export function App() {
   const [stats, setStats] = useState<RenderStats | null>(null)
   const [ready, setReady] = useState(false)
 
+  useEffect(() => connectAgents(), [])
   useEffect(() => (showDiagnostics ? installDevApi() : undefined), [showDiagnostics])
 
   useEffect(() => {
