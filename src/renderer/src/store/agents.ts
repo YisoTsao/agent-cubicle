@@ -3,6 +3,7 @@ import type { StateSnapshot } from '@shared/ipc'
 import { styleFor, toPresentation } from '../characters/fromSession'
 import { PRESENTATION_STATES, type PresentationState } from '../characters/presentation'
 import type { ChibiStyle } from '../characters/rig/chibiRig'
+import { PLACE_GROUPS } from '../characters/places'
 import { WORKSTATIONS } from '../scene/props/WorkDesk'
 
 // Renderer-side view of agents.
@@ -27,7 +28,7 @@ export type AgentSource = 'live' | 'manual'
 interface AgentsState {
   source: AgentSource
   agents: AgentView[]
-  /** Sessions without a seat (rendered as an overflow badge, not characters). */
+  /** Sessions with neither a desk nor a waiting spot (shown as a "+N" badge, not characters). */
   overflow: number
   /** Bumped by respawn(); used as a React key to remount characters (lifecycle tests). */
   generation: number
@@ -53,17 +54,21 @@ function manualAgent(state: PresentationState): AgentView {
 export function fromSnapshot(snapshot: StateSnapshot): { agents: AgentView[]; overflow: number } {
   const agents: AgentView[] = []
   let overflow = 0
+  let waiting = 0
+  const waitSpots = PLACE_GROUPS['wait']?.length ?? 0
   for (const s of snapshot.sessions) {
     const desk = s.seat !== undefined ? WORKSTATIONS[s.seat] : undefined
-    if (!desk) {
+    // No desk: stand in the waiting area while there is room, otherwise only count.
+    if (!desk && waiting >= waitSpots) {
       overflow++
       continue
     }
+    if (!desk) waiting++
     const view: AgentView = {
       id: `${s.agentId}:${s.sessionId}`,
       name: s.agentName,
       state: toPresentation(s),
-      deskId: desk.id,
+      deskId: desk?.id ?? 'wait',
       style: styleFor(s.agentId),
       inferred: s.inferred,
     }

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { IpcChannel, type PingResult, type StateSnapshot } from '@shared/ipc'
 import { SCENARIOS, SCENARIO_NAMES } from '@shared/sim/scenarios'
 import type { HubService } from './hubService'
+import type { Integrations } from './integrations'
 import { isTrustedRendererUrl } from './security'
 
 function assertTrustedSender(event: IpcMainInvokeEvent): void {
@@ -25,7 +26,10 @@ const RunArgs = z.tuple([
   z.number().min(0.1).max(20).optional(),
 ])
 
-export function registerIpcHandlers(hub: HubService): void {
+const HookAction = z.tuple([z.enum(['install', 'uninstall'])])
+const PlanId = z.tuple([z.string().uuid()])
+
+export function registerIpcHandlers(hub: HubService, integrations: Integrations): void {
   ipcMain.handle(IpcChannel.Ping, (event): PingResult => {
     assertTrustedSender(event)
     return { pong: true, appVersion: app.getVersion(), timestamp: Date.now() }
@@ -33,6 +37,24 @@ export function registerIpcHandlers(hub: HubService): void {
   ipcMain.handle(IpcChannel.GetSnapshot, (event): StateSnapshot => {
     assertTrustedSender(event)
     return hub.snapshot()
+  })
+
+  // User-facing integrations. Hook changes are two-step: the renderer must show the plan's diff
+  // and the user must confirm before applyHooks(planId) is called.
+  ipcMain.handle(IpcChannel.IntegrationStatus, (event) => {
+    assertTrustedSender(event)
+    return integrations.status()
+  })
+  ipcMain.handle(IpcChannel.HookPlan, (event, ...args: unknown[]) => {
+    assertTrustedSender(event)
+    const [action] = HookAction.parse(args)
+    return integrations.installer.plan(action)
+  })
+  ipcMain.handle(IpcChannel.HookApply, (event, ...args: unknown[]) => {
+    assertTrustedSender(event)
+    const [planId] = PlanId.parse(args)
+    integrations.installer.apply(planId)
+    return integrations.status()
   })
 
   ipcMain.handle(IpcChannel.DevListScenarios, (event) => {

@@ -120,3 +120,160 @@ body,
   opacity: 0.6;
   font-weight: 500;
 }
+
+.overflow-badge {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgb(255 250 242 / 90%);
+  box-shadow: 0 1px 4px rgb(60 40 20 / 25%);
+  color: #3b3127;
+  font:
+    600 12px/1.4 system-ui,
+    -apple-system,
+    'PingFang TC',
+    sans-serif;
+}
+
+.connect-button {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 250 242 / 92%);
+  box-shadow: 0 1px 4px rgb(60 40 20 / 25%);
+  color: #3b3127;
+  font:
+    600 13px/1.4 system-ui,
+    -apple-system,
+    'PingFang TC',
+    sans-serif;
+  cursor: pointer;
+}
+
+.panel {
+  position: fixed;
+  right: 12px;
+  bottom: 52px;
+  width: 440px;
+  max-height: calc(100vh - 80px);
+  overflow: auto;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgb(255 250 242 / 97%);
+  box-shadow: 0 6px 24px rgb(60 40 20 / 25%);
+  color: #3b3127;
+  font:
+    13px/1.5 system-ui,
+    -apple-system,
+    'PingFang TC',
+    sans-serif;
+}
+
+.panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.panel__close {
+  border: 0;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+  color: inherit;
+}
+
+.panel h3 {
+  margin: 12px 0 4px;
+  font-size: 13px;
+}
+
+.panel p {
+  margin: 4px 0;
+}
+
+.panel button {
+  padding: 4px 12px;
+  border: 1px solid #d8c3a5;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.panel button.primary {
+  border-color: #c98a5a;
+  background: #d4866a;
+  color: #fff;
+}
+
+.panel button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.panel code {
+  font:
+    12px ui-monospace,
+    Menlo,
+    monospace;
+}
+
+.panel .small {
+  font-size: 11.5px;
+}
+
+.panel .error {
+  color: #b5402f;
+}
+
+.panel .row {
+  display: flex;
+  gap: 8px;
+}
+
+.diff {
+  max-height: 260px;
+  overflow: auto;
+  padding: 8px;
+  border-radius: 8px;
+  background: #2b2522;
+  color: #e9e1d6;
+  font:
+    11px/1.45 ui-monospace,
+    Menlo,
+    monospace;
+  white-space: pre;
+}
+
+.diff .add {
+  color: #9fe0a6;
+}
+
+.diff .del {
+  color: #ff9c8a;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #bbb;
+}
+
+.dot--ok {
+  background: #5fb87a;
+}
+
+.dot--err {
+  background: #e0574a;
+}

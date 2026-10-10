@@ -6,6 +6,10 @@ export const IpcChannel = {
   Ping: 'cubicle:ping',
   GetSnapshot: 'cubicle:get-snapshot',
   StateChanged: 'cubicle:state-changed',
+  // Integrations (user-facing)
+  IntegrationStatus: 'cubicle:integration:status',
+  HookPlan: 'cubicle:integration:hook-plan',
+  HookApply: 'cubicle:integration:hook-apply',
   // Dev-only (rejected in packaged builds unless CUBICLE_DEV_TOOLS=1)
   DevListScenarios: 'cubicle:dev:list-scenarios',
   DevRunScenario: 'cubicle:dev:run-scenario',
@@ -46,10 +50,36 @@ export interface CubicleDevApi {
   diagnostics(): Promise<DiagnosticsView>
 }
 
+export interface IntegrationStatus {
+  server:
+    | { state: 'listening'; port: number; eventUrl: string }
+    | { state: 'stopped' }
+    | { state: 'error'; message: string }
+  hooks: { path: string; installed: boolean; error?: string; lastEventAt: number; count: number }
+  transcripts: { enabled: boolean; root: string; files: number; lines: number }
+}
+
+export interface HookPlanView {
+  planId: string
+  action: 'install' | 'uninstall'
+  path: string
+  fileExists: boolean
+  diff: string
+  noop: boolean
+}
+
+/** Connecting agents (user-facing). Hook changes are always previewed before being applied. */
+export interface CubicleIntegrationApi {
+  status(): Promise<IntegrationStatus>
+  planHooks(action: 'install' | 'uninstall'): Promise<HookPlanView>
+  applyHooks(planId: string): Promise<IntegrationStatus>
+}
+
 /** API exposed on `window.cubicle` by the preload script. */
 export interface CubicleApi {
   ping(): Promise<PingResult>
   getSnapshot(): Promise<StateSnapshot>
   onState(callback: (snapshot: StateSnapshot) => void): () => void
+  integration: CubicleIntegrationApi
   dev: CubicleDevApi
 }

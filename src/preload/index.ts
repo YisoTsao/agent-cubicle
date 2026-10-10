@@ -10,6 +10,11 @@ const api: CubicleApi = {
     ipcRenderer.on(IpcChannel.StateChanged, listener)
     return () => ipcRenderer.removeListener(IpcChannel.StateChanged, listener)
   },
+  integration: {
+    status: () => ipcRenderer.invoke(IpcChannel.IntegrationStatus),
+    planHooks: (action) => ipcRenderer.invoke(IpcChannel.HookPlan, action),
+    applyHooks: (planId) => ipcRenderer.invoke(IpcChannel.HookApply, planId),
+  },
   // Main rejects these in packaged builds; exposing the functions grants nothing by itself.
   dev: {
     listScenarios: () => ipcRenderer.invoke(IpcChannel.DevListScenarios),

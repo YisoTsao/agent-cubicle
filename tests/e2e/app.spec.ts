@@ -1,6 +1,7 @@
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { isolatedEnv } from '../isolatedEnv'
 import {
   _electron as electron,
   expect,
@@ -15,7 +16,7 @@ let page: Page
 test.beforeAll(async () => {
   app = await electron.launch({
     args: [resolve(__dirname, '../..')],
-    env: { ...process.env, CUBICLE_USER_DATA: mkdtempSync(join(tmpdir(), 'cubicle-e2e-')) },
+    env: { ...isolatedEnv(), CUBICLE_USER_DATA: mkdtempSync(join(tmpdir(), 'cubicle-e2e-')) },
   })
   page = await app.firstWindow()
 })
@@ -65,7 +66,7 @@ test.describe('security checklist (SPEC §8)', () => {
     }))
     expect(env.require).toBe('undefined')
     expect(env.process).toBe('undefined')
-    expect(env.bridgeKeys).toEqual(['dev', 'getSnapshot', 'onState', 'ping'])
+    expect(env.bridgeKeys).toEqual(['dev', 'getSnapshot', 'integration', 'onState', 'ping'])
   })
 
   test('CSP meta is present and strict in production build', async () => {

@@ -35,6 +35,8 @@ function cspPlugin(): Plugin {
 export default defineConfig({
   main: {
     resolve: { alias },
+    // chokidar 5 is ESM-only; bundle it into the CJS main build instead of require()-ing it.
+    build: { externalizeDeps: { exclude: ['chokidar'] } },
   },
   preload: {
     resolve: { alias },

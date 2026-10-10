@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { isolatedEnv } from '../isolatedEnv'
 import { _electron as electron, expect, test } from '@playwright/test'
 
 // One showcase close-up per presentation state (Phase 2 review), cropped around the agent so
@@ -27,7 +28,7 @@ for (const state of STATES) {
     const app = await electron.launch({
       args: ['--force-device-scale-factor=2', ROOT],
       env: {
-        ...process.env,
+        ...isolatedEnv(),
         CUBICLE_SHOWCASE: '1',
         CUBICLE_DIAGNOSTICS: '1',
         CUBICLE_QUALITY: 'balanced',

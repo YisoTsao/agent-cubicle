@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { isolatedEnv } from '../isolatedEnv'
 import { _electron as electron, expect, test } from '@playwright/test'
 
 // Live review capture (not a pixel baseline): the multi-session scenario mid-run, with the dev
@@ -13,7 +14,7 @@ test('live multi-session', async () => {
   const app = await electron.launch({
     args: ['--force-device-scale-factor=2', resolve(__dirname, '../..')],
     env: {
-      ...process.env,
+      ...isolatedEnv(),
       CUBICLE_DIAGNOSTICS: '1',
       CUBICLE_SIMULATE: 'multi-session',
       CUBICLE_USER_DATA: mkdtempSync(join(tmpdir(), 'cubicle-live-')),

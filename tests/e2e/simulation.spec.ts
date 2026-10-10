@@ -1,6 +1,7 @@
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { isolatedEnv } from '../isolatedEnv'
 import {
   _electron as electron,
   expect,
@@ -30,7 +31,7 @@ test.beforeAll(async () => {
   app = await electron.launch({
     args: [resolve(__dirname, '../..')],
     env: {
-      ...process.env,
+      ...isolatedEnv(),
       CUBICLE_DIAGNOSTICS: '1',
       CUBICLE_USER_DATA: mkdtempSync(join(tmpdir(), 'cubicle-sim-')),
     },
@@ -109,12 +110,12 @@ test('normal-task drives one character through the whole lifecycle', async () =>
     i = next
   }
   // The character physically went to the terminal for EXEC and to the sofa for IDLE.
-  expect(places['Claude Code']).toContain('terminal')
+  expect(places['Claude Code']).toContain('terminal:0')
   await expect
     .poll(async () => (await watch(() => true, 0)).places['Claude Code']?.at(-1), {
       timeout: 15_000,
     })
-    .toBe('lounge')
+    .toBe('lounge:0')
 })
 
 test('approval: the character waits (sticky) and then carries on', async () => {

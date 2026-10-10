@@ -48,19 +48,19 @@ describe('Locomotion', () => {
 
   it('redirects mid-walk without jumping', () => {
     const loco = new Locomotion(placeById('desk-a'))
-    loco.goTo(placeById('lounge'))
+    loco.goTo(placeById('lounge:0'))
     const a = run(loco, 1.2)
-    loco.goTo(placeById('terminal'))
+    loco.goTo(placeById('terminal:0'))
     const b = run(loco, 20)
     const step = maxStep([...a, ...b])
     expect(step.pos).toBeLessThanOrEqual(WALK_SPEED / 60 + 1e-6)
-    expect(loco.place.id).toBe('terminal')
+    expect(loco.place.id).toBe('terminal:0')
     expect(loco.state).toBe('settled')
   })
 
   it('clamps long frame hitches', () => {
     const loco = new Locomotion(placeById('desk-a'))
-    loco.goTo(placeById('terminal'))
+    loco.goTo(placeById('terminal:0'))
     const before = { x: loco.x, z: loco.z }
     loco.update(1.5) // 1.5 s hitch
     expect(Math.hypot(loco.x - before.x, loco.z - before.z)).toBeLessThanOrEqual(

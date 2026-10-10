@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from 'electron'
 import { HubService } from './hubService'
+import { Integrations } from './integrations'
 import { devToolsEnabled, registerIpcHandlers } from './ipc'
 import { hardenSession } from './security'
 import { createMainWindow } from './window'
@@ -20,6 +21,7 @@ if (!app.requestSingleInstanceLock()) {
 
   // Authoritative agent state lives here (SPEC §3); renderers only receive snapshots.
   const hub = new HubService()
+  const integrations = new Integrations(hub)
 
   app.on('second-instance', () => {
     if (!mainWindow) return
@@ -29,8 +31,9 @@ if (!app.requestSingleInstanceLock()) {
 
   void app.whenReady().then(() => {
     hardenSession()
-    registerIpcHandlers(hub)
+    registerIpcHandlers(hub, integrations)
     hub.start()
+    void integrations.start()
     mainWindow = createMainWindow()
     autoSimulate(hub)
     mainWindow.on('closed', () => (mainWindow = null))
@@ -40,7 +43,10 @@ if (!app.requestSingleInstanceLock()) {
     })
   })
 
-  app.on('before-quit', () => hub.stop())
+  app.on('before-quit', () => {
+    hub.stop()
+    void integrations.stop()
+  })
 
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()

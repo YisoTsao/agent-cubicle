@@ -1,6 +1,7 @@
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { isolatedEnv } from '../isolatedEnv'
 import {
   _electron as electron,
   expect,
@@ -36,7 +37,7 @@ test.beforeAll(async () => {
   app = await electron.launch({
     args: [resolve(__dirname, '../..')],
     env: {
-      ...process.env,
+      ...isolatedEnv(),
       CUBICLE_DIAGNOSTICS: '1',
       CUBICLE_STATE: 'WRITE',
       CUBICLE_USER_DATA: mkdtempSync(join(tmpdir(), 'cubicle-anim-')),
@@ -124,8 +125,8 @@ test('dev panel is available in diagnostics mode', async () => {
 })
 
 for (const [from, to, place] of [
-  ['WRITE', 'EXEC', 'terminal'],
-  ['EXEC', 'IDLE', 'lounge'],
+  ['WRITE', 'EXEC', 'terminal:0'],
+  ['EXEC', 'IDLE', 'lounge:0'],
   ['IDLE', 'READ', 'desk-a'],
 ] as const) {
   test(`${from} → ${to}: walks to ${place} without teleporting`, async () => {

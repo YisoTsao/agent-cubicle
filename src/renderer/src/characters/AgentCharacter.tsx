@@ -18,9 +18,10 @@ import type { AgentView } from '../store/agents'
 import { AnimationController } from './AnimationController'
 import { agentDebug } from './debug'
 import { overlayTexture } from './icons'
-import { Locomotion, placeById } from './Locomotion'
+import { Locomotion } from './Locomotion'
+import { claimSlot, releaseAll } from './placeBook'
 import { CHIBI_MANIFEST, resolveClips, type ClipRole } from './manifest'
-import type { Place } from './places'
+import { PLACES, type Place } from './places'
 import {
   PRESENTATION,
   PROP_FOR_GESTURE,
@@ -69,7 +70,15 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
     [rig],
   )
   const loco = useMemo(
-    () => new Locomotion(placeById(placeIdFor(agent.state, agent.deskId, agent.deskId))),
+    () =>
+      new Locomotion(
+        resolvePlace(
+          agent.id,
+          placeIdFor(agent.state, agent.deskId, agent.deskId),
+          agent.deskId,
+          null,
+        ),
+      ),
     // Spawn location only; later state changes walk instead of re-creating.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [rig],
@@ -97,6 +106,11 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
   }, [controller, rig])
 
   useEffect(() => {
+    const id = agent.id
+    return () => releaseAll(id)
+  }, [agent.id])
+
+  useEffect(() => {
     return () => {
       props.dispose()
       overlayMaterial.dispose() // shared icon textures are app-lifetime; not disposed here
@@ -109,20 +123,22 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
   // committed the previous gesture keeps playing; overlays and screens update immediately.
   useLayoutEffect(() => {
     overlayPop.current = 0
-    const target = placeById(placeIdFor(agent.state, agent.deskId, loco.place.id))
+    const targetId = placeIdFor(agent.state, agent.deskId, loco.place.id)
     const commit = () => {
       committed.current = agent.state
       onceDone.current = false
+      const target = resolvePlace(agent.id, targetId, agent.deskId, loco.place.id)
       if (showcase) loco.teleport(target)
       else loco.goTo(target)
     }
-    if (showcase || target.id === loco.place.id) {
+    const alreadyThere = targetId === loco.place.id || targetId === loco.place.group
+    if (showcase || alreadyThere) {
       commit()
       return
     }
     const timer = setTimeout(commit, PLACE_DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [agent.state, agent.deskId, loco, showcase])
+  }, [agent.id, agent.state, agent.deskId, loco, showcase])
 
   useEffect(() => {
     agentDebug.set(agent.id, {
@@ -224,6 +240,23 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
       </group>
     </>
   )
+}
+
+/**
+ * Claim a slot in the target group; if it's full fall back to the agent's own desk, then the
+ * waiting area, then stay put. Never throws: someone always has somewhere to be.
+ */
+function resolvePlace(
+  agentId: string,
+  target: string,
+  deskId: string,
+  current: string | null,
+): Place {
+  for (const candidate of [target, deskId, 'wait']) {
+    const slot = claimSlot(agentId, candidate, current)
+    if (slot) return slot
+  }
+  return (current && PLACES[current]) || PLACES['wait:0']!
 }
 
 function easeOutBack(x: number): number {

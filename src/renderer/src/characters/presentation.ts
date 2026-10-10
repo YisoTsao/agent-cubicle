@@ -65,13 +65,27 @@ export const PROP_FOR_GESTURE: Partial<Record<ClipRole, HandProp>> = {
   read: 'book',
 }
 
+/** Desk gestures (IK'd for sitting) have a standing equivalent for agents without a chair. */
+const STANDING_EQUIVALENT: Partial<Record<ClipRole, ClipRole>> = {
+  type_fast: 'stand_idle',
+  sit_idle: 'stand_idle',
+  think: 'stand_idle',
+  read: 'stand_idle',
+  idle_coffee: 'stand_idle',
+}
+
 /** Gesture for a state once the character is settled in `posture`. */
 export function gestureFor(state: PresentationState, posture: Place['posture']): ClipRole {
   const p = PRESENTATION[state]
-  return p.gestureByPosture?.[posture] ?? p.gesture
+  const explicit = p.gestureByPosture?.[posture]
+  if (explicit) return explicit
+  return posture === 'stand' ? (STANDING_EQUIVALENT[p.gesture] ?? p.gesture) : p.gesture
 }
 
-/** Resolve the target place id for a state. */
+/**
+ * Target for a state: a place *group* ("terminal", "lounge"…), the agent's desk id, or — for
+ * "stay" — the slot it currently occupies. The character resolves groups to free slots.
+ */
 export function placeIdFor(
   state: PresentationState,
   deskId: string,

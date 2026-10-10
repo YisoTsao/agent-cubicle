@@ -216,6 +216,22 @@ describe('ingestion (dedupe, ordering, validation)', () => {
     expect(seats()).toEqual({ b: 1, c: 0 })
   })
 
+  it('prefers the seat an agent used before', () => {
+    const { hub, send, tick } = setup({ seats: 2, endedLingerMs: 0 })
+    send('SESSION_STARTED', { agentId: 'codex', sessionId: 'x1' })
+    send('SESSION_STARTED', { agentId: 'claude-code', sessionId: 'y1' })
+    send('SESSION_ENDED', { agentId: 'codex', sessionId: 'x1' })
+    send('SESSION_ENDED', { agentId: 'claude-code', sessionId: 'y1' })
+    tick(1)
+    expect(hub.snapshot().sessions).toHaveLength(0)
+    // Claude arrives first this time, but codex's old seat 0 stays codex's preference.
+    send('SESSION_STARTED', { agentId: 'claude-code', sessionId: 'y2' })
+    send('SESSION_STARTED', { agentId: 'codex', sessionId: 'x2' })
+    const seat = (id: string) => hub.snapshot().sessions.find((s) => s.sessionId === id)?.seat
+    expect(seat('y2')).toBe(1)
+    expect(seat('x2')).toBe(0)
+  })
+
   it('sanitizes detail to basenames by default', () => {
     expect(basename('/Users/me/secret/project/a.ts')).toBe('a.ts')
     expect(basename('C:\\Users\\me\\b.ts')).toBe('b.ts')

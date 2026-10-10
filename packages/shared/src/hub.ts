@@ -61,6 +61,8 @@ export class EventHub {
   private readonly seenOrder: string[] = []
   private readonly diag: DiagnosticEntry[] = []
   private readonly listeners = new Set<() => void>()
+  /** agentId → seat it last used, so an agent tends to come back to "its" desk. */
+  private readonly preferredSeat = new Map<string, number>()
 
   constructor(
     private readonly now: () => number,
@@ -155,13 +157,22 @@ export class EventHub {
 
   private open(event: AgentEvent): SessionRecord {
     const s = createSession(event)
-    const seat = this.freeSeat()
-    if (seat !== undefined) s.seat = seat
+    this.assignSeat(s)
     return s
   }
 
-  private freeSeat(): number | undefined {
+  private assignSeat(s: SessionRecord): void {
+    const seat = this.freeSeat(s.agentId)
+    if (seat === undefined) return
+    s.seat = seat
+    this.preferredSeat.set(s.agentId, seat)
+  }
+
+  private freeSeat(agentId: string): number | undefined {
     const taken = new Set([...this.sessions.values()].map((s) => s.seat))
+    const preferred = this.preferredSeat.get(agentId)
+    if (preferred !== undefined && preferred < this.cfg.seats && !taken.has(preferred))
+      return preferred
     for (let i = 0; i < this.cfg.seats; i++) if (!taken.has(i)) return i
     return undefined
   }
@@ -171,11 +182,7 @@ export class EventHub {
     const waiting = [...this.sessions.values()]
       .filter((s) => s.seat === undefined && s.endedAt === undefined)
       .sort((a, b) => a.since - b.since)
-    for (const s of waiting) {
-      const seat = this.freeSeat()
-      if (seat === undefined) break
-      s.seat = seat
-    }
+    for (const s of waiting) this.assignSeat(s)
   }
 
   private sanitize(e: AgentEvent): AgentEvent {

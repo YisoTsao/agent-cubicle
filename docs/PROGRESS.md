@@ -1,13 +1,13 @@
 # PROGRESS
 
-| Phase             | 狀態                  | 備註                                               |
-| ----------------- | --------------------- | -------------------------------------------------- |
-| 0 骨架            | ✅ 完成（2026-10-10） | 見下                                               |
-| 1 視覺原型        | ✅ 完成（2026-10-10） | 使用者驗收美術方向                                 |
-| 2 角色動畫        | ✅ 完成（2026-10-10） | 使用者驗收動作                                     |
-| 3 狀態機 + 模擬器 | 🟡 待使用者審查       | 截圖：tests/visual/baseline/live-multi-session.png |
-| 4 真實整合        | 未開始                | 先驗證 Claude Code hooks 官方文件                  |
-| 5 正式化          | 未開始                |                                                    |
+| Phase             | 狀態                  | 備註                                  |
+| ----------------- | --------------------- | ------------------------------------- |
+| 0 骨架            | ✅ 完成（2026-10-10） | 見下                                  |
+| 1 視覺原型        | ✅ 完成（2026-10-10） | 使用者驗收美術方向                    |
+| 2 角色動畫        | ✅ 完成（2026-10-10） | 使用者驗收動作                        |
+| 3 狀態機 + 模擬器 | ✅ 完成（2026-10-10） | 使用者驗收                            |
+| 4 真實整合        | ✅ 完成（2026-10-10） | 使用者驗收；真實 Claude Code 驗證延後 |
+| 5 正式化          | 進行中                |                                       |
 
 每階段完成後補：測試結果 / 已知限制 / 待辦。
 
@@ -168,3 +168,38 @@
 - CLI 尚不能推送事件（等 Phase 4 的本機 server）
 
 **驗收**：使用者確認（2026-10-10）
+
+---
+
+## Phase 4 — 真實整合（分支 `phase-4-integration`）
+
+**事前驗證**：對照官方 hooks 文件（code.claude.com/docs/en/hooks，2026-10）。官方已支援 `http` 型與 `async` command hook，
+但兩者都不適合本用途：http 型在 App 關閉時每次工具呼叫都會顯示 hook error；async 型各自是背景程序，Pre/PostToolUse 可能顛倒。
+因此採**同步 command hook + curl**（0.3/0.5 秒逾時、輸出全丟棄、永遠 `exit 0`）：順序有保證、App 關閉時靜默、永不阻擋 Claude。
+
+**交付**
+
+- Adapters（純函式）：Claude hooks（10 種事件，含 `PermissionRequest`、`PostToolUseFailure`、`StopFailure`）、Claude JSONL 紀錄（prompt / tool_use / tool_result / end_turn，略過 sidechain）；不轉送 prompt、檔案內容
+- 本機 server：127.0.0.1 + 來源檢查、Bearer token（timing-safe）、拒絕 `Origin`、`Host` 白名單（防 DNS rebinding）、JSON-only、大小限制（event 16 KB / hook 1 MB）、限流；只接受觀察事件
+- `~/.agentcubicle`：token、endpoint.json、hook-url（權限 600）；hook 指令執行時才讀取，換 token/埠不需重裝
+- Ingest router：同一 session 一旦有 hooks，JSONL 推估即忽略
+- JSONL 監聽：啟動不重播歷史、近期 session 宣告、新檔從頭讀、半行緩衝、截斷重置、忽略 subagent 紀錄
+- Hook 安裝器：純函式編輯（冪等、只動自己的條目、移除後完全還原）；plan → diff → 使用者確認 → 檔案未變才寫、先備份、原子替換
+- 多 agent：hub 座位偏好；地點槽位（終端機 2、沙發 2、咖啡吧 1、等待區 2）；滿了退回自己的桌子；超額顯示「+N」
+- UI：「連接」面板（伺服器、Claude Code 連接/中斷含 diff、紀錄檔、Webhook）
+- `pnpm sim post <name>`、`docs/INTEGRATIONS.md`（curl / Python 範例、安全說明）
+- 測試隔離：`tests/isolatedEnv.ts`，所有 e2e/截圖都用暫存的 userData、`~/.agentcubicle`、`~/.claude` 與隨機埠，不碰開發者環境
+
+**測試結果**
+
+- unit 210/210：adapters、hook 設定編輯、**真實 sh + curl 執行 hook 指令**（送達 token/payload；App 關閉時 exit 0、無輸出、<1.5 秒）、JSONL 監聽（真實檔案系統）、座位偏好、槽位
+- e2e 31/31，新增 12 項：server 安全矩陣（無/錯 token、Origin、Host、content-type、壞 JSON、無效事件、超大、錯方法/路徑）、webhook 驅動角色且路徑去敏、重複事件、**從 UI 連接 → 以實際安裝的指令跑完整 Claude 流程（寫檔 → 等待批准 → 完成）→ 中斷後設定完全還原**、預覽後檔案被改則拒絕寫入、JSONL 驅動角色、5 個 agent 的桌位/等待區/+N 與兩個 EXEC 分到不同終端機槽位
+
+**已知限制**
+
+- 尚未用真實 Claude Code 驗證（需使用者同意；建議 `claude --settings <暫存檔> -p` 不動正式設定）
+- Windows：hook 指令假設 `sh` + `curl`（Git Bash）；PowerShell 版本待 Phase 5
+- 沒有碰撞避讓：走路途中角色可能互相穿過（各自的目的地不會重疊）
+- 連接面板的設定檔路徑顯示兩次（小瑕疵）
+
+**驗收**：使用者確認截圖（2026-10-10）；使用者選擇暫不以真實 Claude Code 驗證（需耗用額度），已改以「實際安裝的 hook 指令 + 官方格式 payload」e2e 驗證

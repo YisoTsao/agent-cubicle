@@ -6,9 +6,10 @@ import { IsoCamera } from './scene/IsoCamera'
 import { Lighting } from './scene/Lighting'
 import { OfficeScene } from './scene/OfficeScene'
 import { useQuality } from './scene/useQuality'
-import { connectAgents } from './store/agents'
+import { connectAgents, useAgents } from './store/agents'
 import { useSettings } from './store/settings'
 import { DevPanel } from './ui/DevPanel'
+import { IntegrationPanel } from './ui/IntegrationPanel'
 import { DevCameraProbe, installDevApi } from './ui/devApi'
 import { DiagnosticsPanel, StatsProbe, type RenderStats } from './ui/Diagnostics'
 
@@ -17,8 +18,10 @@ export function App() {
   const showDiagnostics = useSettings((s) => s.showDiagnostics)
   const toggleDiagnostics = useSettings((s) => s.toggleDiagnostics)
   const showcase = useSettings((s) => s.showcase)
+  const overflow = useAgents((s) => s.overflow)
   const [stats, setStats] = useState<RenderStats | null>(null)
   const [ready, setReady] = useState(false)
+  const [connectOpen, setConnectOpen] = useState(false)
 
   useEffect(() => connectAgents(), [])
   useEffect(() => (showDiagnostics ? installDevApi() : undefined), [showDiagnostics])
@@ -55,6 +58,21 @@ export function App() {
         <StatsProbe onSample={showDiagnostics ? setStats : noop} />
         {showDiagnostics && <DevCameraProbe />}
       </Canvas>
+      {overflow > 0 && (
+        <div className="overflow-badge" data-testid="overflow-badge">
+          +{overflow} more agent{overflow > 1 ? 's' : ''}
+        </div>
+      )}
+      {!showcase && (
+        <button
+          className="connect-button"
+          onClick={() => setConnectOpen((v) => !v)}
+          data-testid="connect-button"
+        >
+          連接
+        </button>
+      )}
+      {connectOpen && <IntegrationPanel onClose={() => setConnectOpen(false)} />}
       {showDiagnostics && <DiagnosticsPanel stats={stats} />}
       {showDiagnostics && !showcase && <DevPanel />}
     </main>
