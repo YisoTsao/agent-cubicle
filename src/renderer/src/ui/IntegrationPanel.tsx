@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { HookPlanView, IntegrationStatus } from '@shared/ipc'
 import type { QualityLevel } from '../config/render'
+import { CHARACTERS } from '../characters/roster'
+import { useAgents } from '../store/agents'
 import { useSettings } from '../store/settings'
 
 // "連接" panel (SPEC §5): server status, Claude Code hook install/uninstall with a mandatory
@@ -59,6 +61,8 @@ export function IntegrationPanel({ onClose }: { onClose(): void }) {
   const setQuality = useSettings((s) => s.setQuality)
   const alwaysOnTop = useSettings((s) => s.alwaysOnTop)
   const setAlwaysOnTop = useSettings((s) => s.setAlwaysOnTop)
+  const choice = useAgents((s) => s.choice)
+  const setCharacter = useSettings((s) => s.setCharacter)
 
   return (
     <div className="panel" role="dialog" aria-label="設定與連接" data-testid="integration-panel">
@@ -95,6 +99,42 @@ export function IntegrationPanel({ onClose }: { onClose(): void }) {
           />{' '}
           視窗永遠置頂
         </label>
+      </section>
+
+      <section>
+        <h3>角色</h3>
+        <div
+          className="characters"
+          role="radiogroup"
+          aria-label="角色"
+          data-testid="character-picker"
+        >
+          {[
+            ...CHARACTERS,
+            {
+              id: 'auto',
+              name: '自動',
+              note: '每個 agent 不同角色',
+              color: 'conic-gradient(#f9c448, #e5291d, #1f3aa6, #ecb4b0, #f2e6bc, #f9c448)',
+            },
+          ].map((c) => (
+            <button
+              key={c.id}
+              role="radio"
+              aria-checked={choice === c.id}
+              className={`character-chip${choice === c.id ? ' primary' : ''}`}
+              data-testid={`character-${c.id}`}
+              title={c.note}
+              onClick={() => setCharacter(c.id)}
+            >
+              <span className="swatch" style={{ background: c.color }} />
+              {c.name}
+            </button>
+          ))}
+        </div>
+        <p className="muted small">
+          換角色只改外觀，狀態與動作完全相同。「自動」會依 agent 分配不同角色。
+        </p>
       </section>
 
       <section>

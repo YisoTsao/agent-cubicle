@@ -16,6 +16,7 @@ import {
   Vector3,
 } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { CHIBI_PROFILE, type RigProfile } from './profile'
 import { BONE_NAMES, createBones, restPosition, type BoneName } from './skeleton'
 
 // Procedural chibi built as ONE SkinnedMesh with rigid per-part skinning and vertex colours:
@@ -44,6 +45,7 @@ export interface ChibiRig {
   root: Group
   mesh: SkinnedMesh
   bones: ReturnType<typeof createBones>
+  profile: RigProfile
   dispose(): void
 }
 
@@ -267,6 +269,7 @@ export function buildChibiRig(style: ChibiStyle = DEFAULT_STYLE): ChibiRig {
     root,
     mesh,
     bones,
+    profile: CHIBI_PROFILE,
     dispose() {
       geometry.dispose()
       material.dispose()

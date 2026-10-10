@@ -30,8 +30,8 @@ import {
   placeIdFor,
   type PresentationState,
 } from './presentation'
+import { buildRig, clipsForRig, type CharacterRig } from './roster'
 import { chibiClips } from './rig/chibiClips'
-import { buildChibiRig } from './rig/chibiRig'
 
 // One agent on screen: skinned rig + animation layers + locomotion + secondary motion + overlay
 // + hand props. All Three.js objects created here are disposed on unmount (SPEC §7 lifecycle).
@@ -52,11 +52,6 @@ const IDLE_FOR_POSTURE: Record<Place['posture'], ClipRole> = {
   stand: 'stand_idle',
 }
 
-/** Heights above the head bone: name tag just over the hair, status icon above the tag. */
-const TAG_HEIGHT = 0.52
-const OVERLAY_HEIGHT = 0.78
-const OVERLAY_SIZE = 0.34
-
 /** A new state must hold this long before the character walks somewhere else. */
 export const PLACE_DEBOUNCE_MS = 1000
 
@@ -65,9 +60,9 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
   const overlayRef = useRef<Sprite>(null)
   const tagRef = useRef<Group>(null)
 
-  const rig = useMemo(() => buildChibiRig(agent.style), [agent.style])
+  const rig = useMemo(() => buildRig(agent.character, agent.style), [agent.character, agent.style])
   const controller = useMemo(
-    () => new AnimationController(rig.root, chibiClips(), CHIBI_MANIFEST, RESOLVED),
+    () => new AnimationController(rig.root, clipsForRig(rig), CHIBI_MANIFEST, RESOLVED),
     [rig],
   )
   const loco = useMemo(
@@ -216,16 +211,16 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
         rig.bones.head.getWorldPosition(scratch.v)
         overlay.position.set(
           scratch.v.x,
-          scratch.v.y + OVERLAY_HEIGHT + Math.sin(t * 2.4) * 0.025,
+          scratch.v.y + rig.profile.overlayHeight + Math.sin(t * 2.4) * 0.025,
           scratch.v.z,
         )
-        overlay.scale.setScalar(OVERLAY_SIZE * pop)
+        overlay.scale.setScalar(rig.profile.overlaySize * pop)
       }
     }
 
     if (tagRef.current) {
       rig.bones.head.getWorldPosition(scratch.v)
-      tagRef.current.position.set(scratch.v.x, scratch.v.y + TAG_HEIGHT, scratch.v.z)
+      tagRef.current.position.set(scratch.v.x, scratch.v.y + rig.profile.tagHeight, scratch.v.z)
     }
   })
 
@@ -318,7 +313,7 @@ function createHandProps(): HandProps {
 
 function updateHandProps(
   props: HandProps,
-  rig: ReturnType<typeof buildChibiRig>,
+  rig: CharacterRig,
   active: 'mug' | 'book' | null,
   yaw: number,
   scratch: { v: Vector3; w: Vector3 },

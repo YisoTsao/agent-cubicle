@@ -1,6 +1,13 @@
 import { create } from 'zustand'
 import type { StateSnapshot } from '@shared/ipc'
 import { styleFor, toPresentation } from '../characters/fromSession'
+import {
+  DEFAULT_CHOICE,
+  characterFor,
+  isChoice,
+  type CharacterChoice,
+  type CharacterId,
+} from '../characters/roster'
 import { PRESENTATION_STATES, type PresentationState } from '../characters/presentation'
 import type { ChibiStyle } from '../characters/rig/chibiRig'
 import { PLACE_GROUPS } from '../characters/places'
@@ -18,6 +25,8 @@ export interface AgentView {
   state: PresentationState
   deskId: string
   style: ChibiStyle
+  /** Which character is drawn (resolved from the user's choice). */
+  character: CharacterId
   /** Low-confidence (inferred) state from the reducer. */
   inferred: boolean
   detail?: string
@@ -32,6 +41,9 @@ interface AgentsState {
   overflow: number
   /** Bumped by respawn(); used as a React key to remount characters (lifecycle tests). */
   generation: number
+  /** The user's character choice (one for everybody, or 'auto' = one per agent). */
+  choice: CharacterChoice
+  setChoice(choice: CharacterChoice): void
   applySnapshot(snapshot: StateSnapshot): void
   setState(id: string, state: PresentationState): void
   setSource(source: AgentSource): void
@@ -40,18 +52,22 @@ interface AgentsState {
 
 export const MANUAL_AGENT_ID = 'claude-code'
 
-function manualAgent(state: PresentationState): AgentView {
+function manualAgent(state: PresentationState, choice: CharacterChoice): AgentView {
   return {
     id: MANUAL_AGENT_ID,
     name: 'Claude Code',
     state,
     deskId: WORKSTATIONS[0]!.id,
     style: styleFor('claude-code'),
+    character: characterFor(choice, 'claude-code'),
     inferred: false,
   }
 }
 
-export function fromSnapshot(snapshot: StateSnapshot): { agents: AgentView[]; overflow: number } {
+export function fromSnapshot(
+  snapshot: StateSnapshot,
+  choice: CharacterChoice,
+): { agents: AgentView[]; overflow: number } {
   const agents: AgentView[] = []
   let overflow = 0
   let waiting = 0
@@ -70,6 +86,7 @@ export function fromSnapshot(snapshot: StateSnapshot): { agents: AgentView[]; ov
       state: toPresentation(s),
       deskId: desk?.id ?? 'wait',
       style: styleFor(s.agentId),
+      character: characterFor(choice, s.agentId),
       inferred: s.inferred,
     }
     if (s.detail !== undefined) view.detail = s.detail
@@ -84,20 +101,38 @@ const initialManual = PRESENTATION_STATES.includes(initial as PresentationState)
   ? (initial as PresentationState)
   : null
 
+const urlCharacter = params.get('character')
+/** A character forced via URL (tests / screenshots) wins over the persisted choice. */
+export const forcedChoice: CharacterChoice | null = isChoice(urlCharacter) ? urlCharacter : null
+const initialChoice = forcedChoice ?? DEFAULT_CHOICE
+
 let lastSnapshot: StateSnapshot = { sessions: [], overflow: 0 }
 
 export const useAgents = create<AgentsState>((set, get) => ({
   source: initialManual ? 'manual' : 'live',
-  agents: initialManual ? [manualAgent(initialManual)] : [],
+  agents: initialManual ? [manualAgent(initialManual, initialChoice)] : [],
   overflow: 0,
   generation: 0,
+  choice: initialChoice,
+  setChoice: (choice) => {
+    if (choice === get().choice) return
+    const { source, agents } = get()
+    set(
+      source === 'live'
+        ? { choice, ...fromSnapshot(lastSnapshot, choice) }
+        : {
+            choice,
+            agents: agents.map((a) => ({ ...a, character: characterFor(choice, a.id) })),
+          },
+    )
+  },
   applySnapshot: (snapshot) => {
     lastSnapshot = snapshot
-    if (get().source === 'live') set(fromSnapshot(snapshot))
+    if (get().source === 'live') set(fromSnapshot(snapshot, get().choice))
   },
   setState: (id, state) => {
     if (get().source !== 'manual') {
-      set({ source: 'manual', agents: [manualAgent(state)], overflow: 0 })
+      set({ source: 'manual', agents: [manualAgent(state, get().choice)], overflow: 0 })
       return
     }
     set((s) => ({ agents: s.agents.map((a) => (a.id === id ? { ...a, state } : a)) }))
@@ -106,8 +141,8 @@ export const useAgents = create<AgentsState>((set, get) => ({
     if (source === get().source) return
     set(
       source === 'live'
-        ? { source, ...fromSnapshot(lastSnapshot) }
-        : { source, agents: [manualAgent('WRITE')], overflow: 0 },
+        ? { source, ...fromSnapshot(lastSnapshot, get().choice) }
+        : { source, agents: [manualAgent('WRITE', get().choice)], overflow: 0 },
     )
   },
   respawn: () => set((s) => ({ generation: s.generation + 1 })),

@@ -36,8 +36,8 @@ export function registerIpcHandlers(
   settings: SettingsStore,
 ): void {
   const userSettings = () => {
-    const { quality, alwaysOnTop } = settings.get()
-    return { quality, alwaysOnTop }
+    const { quality, alwaysOnTop, character } = settings.get()
+    return { quality, alwaysOnTop, character }
   }
   ipcMain.handle(IpcChannel.SettingsGet, (event) => {
     assertTrustedSender(event)

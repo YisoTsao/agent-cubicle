@@ -277,3 +277,22 @@ body,
 .dot--err {
   background: #e0574a;
 }
+
+.characters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.character-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.character-chip .swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+}

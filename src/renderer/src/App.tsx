@@ -9,12 +9,21 @@ import { useQuality } from './scene/useQuality'
 import { FrameCap, usePageVisible } from './scene/FrameDriver'
 import { connectAgents, useAgents } from './store/agents'
 import { loadPersistedSettings, useSettings } from './store/settings'
+import { CharacterPreview } from './ui/CharacterPreview'
 import { DevPanel } from './ui/DevPanel'
 import { IntegrationPanel } from './ui/IntegrationPanel'
 import { DevCameraProbe, installDevApi } from './ui/devApi'
 import { DiagnosticsPanel, StatsProbe, type RenderStats } from './ui/Diagnostics'
 
+const PREVIEW = new URLSearchParams(window.location.search).get('preview')
+
 export function App() {
+  // `?preview=<character>[,view=front][,posture=stand][,gesture=stand_idle]`: a single character
+  // on a plain backdrop, used to compare the models against the reference art.
+  return PREVIEW ? <CharacterPreview spec={PREVIEW} /> : <OfficeApp />
+}
+
+function OfficeApp() {
   const q = useQuality()
   const showDiagnostics = useSettings((s) => s.showDiagnostics)
   const toggleDiagnostics = useSettings((s) => s.toggleDiagnostics)

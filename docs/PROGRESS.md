@@ -268,3 +268,11 @@
 **測試結果**：unit 215/215、e2e 32/32、packaged smoke：macOS arm64 ✅、Linux arm64（容器）✅、soak 30 分鐘 PASS（Phase 5）
 
 **清理**：Phase 0 測試時遺留的 `pnpm dev` 孤兒程序（埠 5174，執行舊程式碼並占住 userData 的單一實例鎖）已關閉；之後的工具都改用隔離的 userData。
+
+## 換角色 + mojojojo 公仔（post-v1）
+
+- **角色系統**：`rig/profile.ts`（體型）→ 動畫片段依體型各自求解（`chibiClips(profile)`，短手臂在 IK 需要時整條等比拉長）；`roster.ts` 列出 7 個角色 + 「自動」；設定面板「角色」切換、`settings.json` 持久化、`?character=` 覆寫（測試用）。
+- **公仔模型**：體 / 頭是「輪廓 → 距離場 → 圓潤厚度 → marching cubes」生成的單一軟墊曲面（無接縫），再由蒙皮權重分給手臂 / 腿 / 脊椎；鴨子頭為旋轉體，其他頭為軟墊（耳朵是輪廓的一部分）。毛絨質感在 fragment shader（速點噪聲、Belle 長毛條紋）。
+- **對照**：鴨子在 `mojojojo-y` 照片視角下輪廓 IoU **0.975**（`tools/preview/compare-duck.sh`）；其餘五隻與 `mojojojo-all` 比較為目視對照（比例、顏色、五官位置依量測值），**不是像素等同**：Kuro 兔耳與 Belle 毛流偏簡化。
+- **量測/限制**：公仔手臂在打字時會被拉長；腿很短，走路以放大擺幅表現。
+- **測試**：unit 228、e2e 34（新增 `character.spec.ts`）。`lifecycle.spec`（視窗隱藏停止繪製）在本機目前失敗，回到變更前的程式碼也同樣失敗（與本次改動無關，疑為此機器視窗狀態），尚未追查。

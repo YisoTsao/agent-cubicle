@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import type { QualityLevel } from '../config/render'
+import { isChoice, type CharacterChoice } from '../characters/roster'
+import { forcedChoice, useAgents } from './agents'
 
 interface SettingsState {
   quality: QualityLevel
@@ -13,6 +15,7 @@ interface SettingsState {
   cleanCapture: boolean
   setQuality(quality: QualityLevel): void
   setAlwaysOnTop(on: boolean): void
+  setCharacter(choice: CharacterChoice): void
   toggleDiagnostics(): void
 }
 
@@ -37,6 +40,10 @@ export const useSettings = create<SettingsState>((set) => ({
     set({ alwaysOnTop })
     void window.cubicle.settings.set({ alwaysOnTop })
   },
+  setCharacter: (choice) => {
+    useAgents.getState().setChoice(choice)
+    void window.cubicle.settings.set({ character: choice })
+  },
   toggleDiagnostics: () => set((s) => ({ showDiagnostics: !s.showDiagnostics })),
 }))
 
@@ -47,5 +54,6 @@ export function loadPersistedSettings(): void {
       alwaysOnTop: s.alwaysOnTop,
       ...(forcedQuality ? {} : { quality: s.quality }),
     })
+    if (!forcedChoice && isChoice(s.character)) useAgents.getState().setChoice(s.character)
   })
 }

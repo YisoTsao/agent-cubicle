@@ -117,6 +117,23 @@ git push origin v0.1.0
 
 App 圖示來自 `build/icon.png`（1024×1024），electron-builder 會自動轉成 `.icns` / `.ico`。
 
+## 換角色
+
+「設定」→「**角色**」可以切換辦公室裡的角色，馬上生效，選擇會被記住：
+
+| 角色           | 說明                                   |
+| -------------- | -------------------------------------- |
+| 上班族         | 原本的 Q 版小人（預設）                |
+| You never know | 黃色小鴨                               |
+| Kuro           | 黑色兔耳                               |
+| Naughty        | 紅色小熊                               |
+| Nicky          | 藍色貓咪                               |
+| Belle          | 粉紅長毛                               |
+| John           | 奶油色、黑色垂耳的狗                   |
+| 自動           | 每個 agent 分配不同角色（依 agent id） |
+
+換角色只改外觀：狀態、動作、座位完全相同。六隻 mojojojo 角色是依產品圖量測輪廓後，用程式（Three.js）生成的 3D 模型，沒有內嵌任何圖片素材，詳見 [assets/LICENSES.md](assets/LICENSES.md)。
+
 ## 連接 Claude Code
 
 1. 開啟 AgentCubicle，點右下角「**設定**」。
@@ -168,6 +185,8 @@ pnpm dist:dir && pnpm test:packaged        # 打包版 smoke test
 pnpm build && SOAK_MINUTES=30 pnpm soak    # 長時間穩定性測試
 pnpm build && pnpm verify:claude           # 用真實 Claude Code 驗證（暫存 settings，少量額度）
 pnpm build && pnpm icon                    # 從 3D 場景重新產生 App 圖示
+pnpm build && pnpm exec tsx tools/preview/capture.ts out/shots 640x720 duck,posture=rest   # 單一角色預覽（?preview=）
+pnpm build && pnpm exec tsx tools/preview/scene.ts out/shots duck WRITE IDLE              # 在辦公室裡看某個角色
 ```
 
 架構與規格：[docs/SPEC.md](docs/SPEC.md)；進度與量測：[docs/PROGRESS.md](docs/PROGRESS.md)。

@@ -81,6 +81,8 @@ export interface CubicleIntegrationApi {
 export interface UserSettings {
   quality: 'high' | 'balanced' | 'low'
   alwaysOnTop: boolean
+  /** Character id, or 'auto' (a different one per agent). */
+  character: string
 }
 
 export interface CubicleSettingsApi {

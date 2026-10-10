@@ -28,8 +28,10 @@ export type BoneName = (typeof BONE_NAMES)[number]
 
 type V3 = [number, number, number]
 
-/** Parent and rest offset (relative to parent) for every bone. */
-export const BONE_REST: Record<BoneName, { parent: BoneName | null; offset: V3 }> = {
+export type BoneRest = Record<BoneName, { parent: BoneName | null; offset: V3 }>
+
+/** Parent and rest offset (relative to parent) for every bone (the original chibi proportions). */
+export const BONE_REST: BoneRest = {
   hips: { parent: null, offset: [0, 0.67, 0] },
   spine: { parent: 'hips', offset: [0, 0.07, 0] },
   neck: { parent: 'spine', offset: [0, 0.3, 0] },
@@ -74,26 +76,26 @@ export const LAYER_BONES = {
 
 export type Layer = keyof typeof LAYER_BONES
 
-export function createBones(): Record<BoneName, Bone> {
+export function createBones(rest: BoneRest = BONE_REST): Record<BoneName, Bone> {
   const bones = {} as Record<BoneName, Bone>
   for (const name of BONE_NAMES) {
     const b = new Bone()
     b.name = name
-    b.position.set(...BONE_REST[name].offset)
+    b.position.set(...rest[name].offset)
     bones[name] = b
   }
   for (const name of BONE_NAMES) {
-    const parent = BONE_REST[name].parent
+    const parent = rest[name].parent
     if (parent) bones[parent].add(bones[name])
   }
   return bones
 }
 
 /** Rest-pose world (model-space) position of a bone. */
-export function restPosition(name: BoneName): V3 {
+export function restPosition(name: BoneName, rest: BoneRest = BONE_REST): V3 {
   let p: V3 = [0, 0, 0]
-  for (let n: BoneName | null = name; n; n = BONE_REST[n].parent) {
-    const o = BONE_REST[n].offset
+  for (let n: BoneName | null = name; n; n = rest[n].parent) {
+    const o = rest[n].offset
     p = [p[0] + o[0], p[1] + o[1], p[2] + o[2]]
   }
   return p

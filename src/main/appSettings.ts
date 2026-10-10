@@ -13,9 +13,13 @@ const Bounds = z.object({
   height: z.number().int().min(240).max(16384),
 })
 
+/** 'auto' or the id of a built-in character (ids are lowercase words). */
+const CharacterId = z.string().regex(/^[a-z]{1,24}$/)
+
 export const AppSettingsSchema = z.object({
   quality: z.enum(['high', 'balanced', 'low']).catch('balanced'),
   alwaysOnTop: z.boolean().catch(false),
+  character: CharacterId.catch('chibi'),
   bounds: Bounds.optional().catch(undefined),
 })
 
@@ -23,7 +27,11 @@ export type AppSettings = z.infer<typeof AppSettingsSchema>
 
 /** What the renderer may change. */
 export const SettingsPatch = z
-  .object({ quality: z.enum(['high', 'balanced', 'low']), alwaysOnTop: z.boolean() })
+  .object({
+    quality: z.enum(['high', 'balanced', 'low']),
+    alwaysOnTop: z.boolean(),
+    character: CharacterId,
+  })
   .partial()
   .strict()
 
