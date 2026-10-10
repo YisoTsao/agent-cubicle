@@ -1,30 +1,55 @@
-import { useEffect, useState } from 'react'
-import type { PingResult } from '@shared/ipc'
-
-type PingState =
-  | { status: 'pending' }
-  | { status: 'ok'; result: PingResult }
-  | { status: 'error'; message: string }
+import { Canvas } from '@react-three/fiber'
+import { Suspense, useEffect, useState } from 'react'
+import { BACKGROUND, RENDERER } from './config/render'
+import { Effects } from './scene/Effects'
+import { IsoCamera } from './scene/IsoCamera'
+import { Lighting } from './scene/Lighting'
+import { OfficeScene } from './scene/OfficeScene'
+import { useQuality } from './scene/useQuality'
+import { useSettings } from './store/settings'
+import { DiagnosticsPanel, StatsProbe, type RenderStats } from './ui/Diagnostics'
 
 export function App() {
-  const [ping, setPing] = useState<PingState>({ status: 'pending' })
+  const q = useQuality()
+  const showDiagnostics = useSettings((s) => s.showDiagnostics)
+  const toggleDiagnostics = useSettings((s) => s.toggleDiagnostics)
+  const [stats, setStats] = useState<RenderStats | null>(null)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    window.cubicle
-      .ping()
-      .then((result) => setPing({ status: 'ok', result }))
-      .catch((err: unknown) => setPing({ status: 'error', message: String(err) }))
-  }, [])
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'F3' || (e.key === 'd' && e.ctrlKey && e.shiftKey)) toggleDiagnostics()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [toggleDiagnostics])
 
   return (
-    <main className="shell">
-      <h1>AgentCubicle</h1>
-      <p className="subtitle">Phase 0 skeleton — 3D scene arrives in Phase 1.</p>
-      <p data-testid="ipc-status">
-        {ping.status === 'pending' && 'IPC: connecting…'}
-        {ping.status === 'ok' && `IPC: pong (v${ping.result.appVersion})`}
-        {ping.status === 'error' && `IPC: error — ${ping.message}`}
-      </p>
+    <main className="stage" data-ready={ready ? 'true' : 'false'} data-testid="stage">
+      <Canvas
+        shadows={{ enabled: q.shadows, type: RENDERER.shadowMapType }}
+        dpr={[1, q.maxDpr]}
+        gl={{
+          antialias: false, // SMAA in post; MSAA is wasted under an EffectComposer
+          powerPreference: 'high-performance',
+          toneMapping: RENDERER.toneMapping,
+          toneMappingExposure: RENDERER.toneMappingExposure,
+          outputColorSpace: RENDERER.outputColorSpace,
+        }}
+        onCreated={() => setReady(true)}
+      >
+        <color attach="background" args={[BACKGROUND]} />
+        <IsoCamera />
+        <Lighting />
+        <Suspense fallback={null}>
+          <OfficeScene />
+        </Suspense>
+        <Effects />
+        <StatsProbe onSample={showDiagnostics ? setStats : noop} />
+      </Canvas>
+      {showDiagnostics && <DiagnosticsPanel stats={stats} />}
     </main>
   )
 }
+
+function noop() {}

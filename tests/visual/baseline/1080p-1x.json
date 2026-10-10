@@ -1,0 +1,18 @@
+{
+  "name": "1080p-1x",
+  "scale": 1,
+  "quality": "balanced",
+  "size": {
+    "w": 1920,
+    "h": 1080,
+    "dpr": 1
+  },
+  "stats": {
+    "fps": 120,
+    "drawCalls": 143,
+    "triangles": 229689,
+    "geometries": 85,
+    "textures": 46,
+    "programs": 29
+  }
+}

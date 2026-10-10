@@ -8,6 +8,11 @@ import { createMainWindow } from './window'
 process.on('uncaughtException', (err) => console.error('[main] uncaughtException', err))
 process.on('unhandledRejection', (reason) => console.error('[main] unhandledRejection', reason))
 
+// Tests run with an isolated profile so they never collide with a developer's running instance
+// (the single-instance lock is scoped to the userData directory).
+const userDataOverride = process.env['CUBICLE_USER_DATA']
+if (userDataOverride) app.setPath('userData', userDataOverride)
+
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {

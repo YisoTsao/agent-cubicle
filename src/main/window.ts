@@ -12,6 +12,8 @@ export function createMainWindow(): BrowserWindow {
     show: false,
     backgroundColor: '#f3ece1',
     title: 'AgentCubicle',
+    // Lets visual tests size the window to 1920×1080 on smaller displays (macOS only).
+    enableLargerThanScreen: process.env['CUBICLE_SHOWCASE'] === '1',
     webPreferences: {
       ...SECURE_WEB_PREFERENCES,
       preload: join(__dirname, '../preload/index.js'),
@@ -21,11 +23,25 @@ export function createMainWindow(): BrowserWindow {
   hardenWebContents(win.webContents)
   win.once('ready-to-show', () => win.show())
 
+  const query = rendererQuery()
   const devUrl = process.env['ELECTRON_RENDERER_URL']
   if (devUrl) {
-    void win.loadURL(devUrl)
+    const url = new URL(devUrl)
+    for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v)
+    void win.loadURL(url.toString())
   } else {
-    void win.loadFile(join(__dirname, '../renderer/index.html'))
+    void win.loadFile(join(__dirname, '../renderer/index.html'), { query })
   }
   return win
+}
+
+/** Developer/test switches forwarded to the renderer (read by the settings store). */
+function rendererQuery(): Record<string, string> {
+  const q: Record<string, string> = {}
+  const env = process.env
+  if (env['CUBICLE_SHOWCASE'] === '1') q['showcase'] = '1'
+  if (env['CUBICLE_DIAGNOSTICS'] === '1') q['diagnostics'] = '1'
+  const quality = env['CUBICLE_QUALITY']
+  if (quality === 'high' || quality === 'balanced' || quality === 'low') q['quality'] = quality
+  return q
 }

@@ -14,12 +14,19 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:e2e": "electron-vite build && playwright test",
-    "postinstall": "install-electron"
+    "postinstall": "install-electron",
+    "screenshots": "electron-vite build && playwright test -c playwright.visual.config.mts"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.1",
+    "@react-three/postprocessing": "^3.1.3",
+    "postprocessing": "^6.39.5",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "zod": "^4.6.5"
+    "three": "^0.186.1",
+    "zod": "^4.6.5",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -27,6 +34,7 @@
     "@types/node": "^26.6.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^6.1.2",
     "electron": "^44.7.0",
     "electron-vite": "^5.0.0",

@@ -1,4 +1,6 @@
-import { resolve } from 'node:path'
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
 import {
   _electron as electron,
   expect,
@@ -11,7 +13,10 @@ let app: ElectronApplication
 let page: Page
 
 test.beforeAll(async () => {
-  app = await electron.launch({ args: [resolve(__dirname, '../..')] })
+  app = await electron.launch({
+    args: [resolve(__dirname, '../..')],
+    env: { ...process.env, CUBICLE_USER_DATA: mkdtempSync(join(tmpdir(), 'cubicle-e2e-')) },
+  })
   page = await app.firstWindow()
 })
 
@@ -24,7 +29,14 @@ test('opens the main window', async () => {
 })
 
 test('renderer reaches main via IPC ping', async () => {
-  await expect(page.getByTestId('ipc-status')).toHaveText(/IPC: pong/)
+  const result = await page.evaluate(() => window.cubicle.ping())
+  expect(result.pong).toBe(true)
+})
+
+test('3D canvas mounts with a WebGL context', async () => {
+  await expect(page.getByTestId('stage')).toHaveAttribute('data-ready', 'true')
+  const hasGl = await page.evaluate(() => !!document.querySelector('canvas')?.getContext('webgl2'))
+  expect(hasGl).toBe(true)
 })
 
 test.describe('security checklist (SPEC §8)', () => {
