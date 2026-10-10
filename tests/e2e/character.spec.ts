@@ -16,11 +16,11 @@ test('pick a character in settings: applies immediately and survives a restart',
   let app = await launch()
   let page = await app.firstWindow()
   await expect(page.getByTestId('stage')).toHaveAttribute('data-ready', 'true')
-  expect(await dev(page)).toMatchObject([{ state: 'WRITE', character: 'chibi' }])
+  expect(await dev(page)).toMatchObject([{ state: 'WRITE', character: 'duck' }]) // default: 預設組合, first desk
 
   await page.getByTestId('connect-button').click()
   await expect(page.getByTestId('character-picker')).toBeVisible()
-  for (const id of ['duck', 'kuro', 'naughty', 'nicky', 'belle', 'john']) {
+  for (const id of ['chibi', 'duck', 'kuro', 'naughty', 'nicky', 'belle', 'john']) {
     await page.getByTestId(`character-${id}`).click()
     await expect(page.getByTestId(`character-${id}`)).toHaveAttribute('aria-checked', 'true')
     // Same state, different body.

@@ -19,7 +19,7 @@ const CharacterId = z.string().regex(/^[a-z]{1,24}$/)
 export const AppSettingsSchema = z.object({
   quality: z.enum(['high', 'balanced', 'low']).catch('balanced'),
   alwaysOnTop: z.boolean().catch(false),
-  character: CharacterId.catch('chibi'),
+  character: CharacterId.catch('duo'),
   bounds: Bounds.optional().catch(undefined),
 })
 

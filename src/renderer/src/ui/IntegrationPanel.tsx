@@ -110,6 +110,12 @@ export function IntegrationPanel({ onClose }: { onClose(): void }) {
           data-testid="character-picker"
         >
           {[
+            {
+              id: 'duo',
+              name: '預設組合',
+              note: '第一張桌小鴨、第二張桌 Kuro',
+              color: 'linear-gradient(90deg, #f9c448 50%, #2a211b 50%)',
+            },
             ...CHARACTERS,
             {
               id: 'auto',
@@ -133,7 +139,8 @@ export function IntegrationPanel({ onClose }: { onClose(): void }) {
           ))}
         </div>
         <p className="muted small">
-          換角色只改外觀，狀態與動作完全相同。「自動」會依 agent 分配不同角色。
+          換角色只改外觀，狀態與動作完全相同。「預設組合」是第一張桌小鴨、第二張桌 Kuro；「自動」依
+          agent 分配不同角色；選單一角色則所有 agent 都用它。
         </p>
       </section>
 

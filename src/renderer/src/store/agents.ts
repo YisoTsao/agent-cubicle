@@ -59,7 +59,7 @@ function manualAgent(state: PresentationState, choice: CharacterChoice): AgentVi
     state,
     deskId: WORKSTATIONS[0]!.id,
     style: styleFor('claude-code'),
-    character: characterFor(choice, 'claude-code'),
+    character: characterFor(choice, 'claude-code', WORKSTATIONS[0]!.id),
     inferred: false,
   }
 }
@@ -86,7 +86,7 @@ export function fromSnapshot(
       state: toPresentation(s),
       deskId: desk?.id ?? 'wait',
       style: styleFor(s.agentId),
-      character: characterFor(choice, s.agentId),
+      character: characterFor(choice, s.agentId, desk?.id ?? 'wait'),
       inferred: s.inferred,
     }
     if (s.detail !== undefined) view.detail = s.detail
@@ -122,7 +122,7 @@ export const useAgents = create<AgentsState>((set, get) => ({
         ? { choice, ...fromSnapshot(lastSnapshot, choice) }
         : {
             choice,
-            agents: agents.map((a) => ({ ...a, character: characterFor(choice, a.id) })),
+            agents: agents.map((a) => ({ ...a, character: characterFor(choice, a.id, a.deskId) })),
           },
     )
   },

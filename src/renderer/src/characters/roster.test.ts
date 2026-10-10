@@ -14,10 +14,15 @@ describe('roster', () => {
 
   it('validates a choice and resolves "auto" deterministically per agent', () => {
     expect(isChoice('auto')).toBe(true)
+    expect(isChoice('duo')).toBe(true)
     expect(isChoice('duck')).toBe(true)
     expect(isChoice('nope')).toBe(false)
     expect(isChoice(7)).toBe(false)
     expect(characterFor('kuro', 'any')).toBe('kuro')
+    // Default pair: by desk.
+    expect(characterFor('duo', 'a', 'desk-a')).toBe('duck')
+    expect(characterFor('duo', 'b', 'desk-b')).toBe('kuro')
+    expect(characterFor('duo', 'c', 'wait')).toBe('duck')
     expect(characterFor('auto', 'claude-code')).toBe(characterFor('auto', 'claude-code'))
     const spread = new Set(
       ['a', 'b', 'c', 'claude-code', 'codex', 'aider', 'x1', 'y2'].map((id) =>

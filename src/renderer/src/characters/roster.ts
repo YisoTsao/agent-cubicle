@@ -47,9 +47,10 @@ export const CHARACTERS: readonly CharacterDef[] = [
 export type CharacterId = string
 
 /** What the user picked: one character for everybody, or a different one per agent. */
-export type CharacterChoice = CharacterId | 'auto'
+/** 'duo' (default): 小鴨 at the first desk, Kuro at the second. */
+export type CharacterChoice = CharacterId | 'auto' | 'duo'
 
-export const DEFAULT_CHOICE: CharacterChoice = 'chibi'
+export const DEFAULT_CHOICE: CharacterChoice = 'duo'
 
 const BY_ID = new Map(CHARACTERS.map((c) => [c.id, c]))
 
@@ -58,11 +59,12 @@ export function isCharacterId(id: unknown): id is CharacterId {
 }
 
 export function isChoice(v: unknown): v is CharacterChoice {
-  return v === 'auto' || isCharacterId(v)
+  return v === 'auto' || v === 'duo' || isCharacterId(v)
 }
 
 /** Which character an agent is drawn as. 'auto' spreads agents over the roster by agent id. */
-export function characterFor(choice: CharacterChoice, agentId: string): CharacterId {
+export function characterFor(choice: CharacterChoice, agentId: string, deskId = ''): CharacterId {
+  if (choice === 'duo') return deskId === 'desk-b' ? 'kuro' : 'duck'
   if (choice !== 'auto') return choice
   let h = 0
   for (const ch of agentId) h = (h * 31 + ch.charCodeAt(0)) >>> 0
