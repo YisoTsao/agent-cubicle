@@ -38,8 +38,8 @@ export const CHIBI_PROFILE: RigProfile = {
   bones: BONE_REST,
   limb: LIMB,
   posture: {
-    sit: { hipsY: 0.55, hipsZ: -0.02, lean: 0.16 },
-    sofa: { hipsY: 0.59, hipsZ: -0.04, lean: -0.24 },
+    sit: { hipsY: 0.59, hipsZ: -0.02, lean: 0.16 },
+    sofa: { hipsY: 0.67, hipsZ: 0.1, lean: -0.24 },
     stand: { hipsY: 0.67, hipsZ: 0, lean: 0.06 },
   },
   walkSwing: 1,

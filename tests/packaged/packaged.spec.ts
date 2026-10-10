@@ -75,7 +75,13 @@ test('packaged app: guards, server and persisted settings', async () => {
 
   // Preferences survive a restart.
   await page.evaluate(() =>
-    window.cubicle.settings.set({ quality: 'low', alwaysOnTop: true, character: 'duck' }),
+    window.cubicle.settings.set({
+      quality: 'low',
+      alwaysOnTop: true,
+      character: 'duck',
+      scene: 'hacker',
+      camera: 'free',
+    }),
   )
   await app.close()
   app = await launch()
@@ -84,6 +90,8 @@ test('packaged app: guards, server and persisted settings', async () => {
     quality: 'low',
     alwaysOnTop: true,
     character: 'duck',
+    scene: 'hacker',
+    camera: 'free',
   })
   expect(
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isAlwaysOnTop()),

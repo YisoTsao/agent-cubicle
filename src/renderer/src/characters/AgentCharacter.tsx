@@ -14,6 +14,7 @@ import {
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { materials } from '../scene/materials'
 import { useSettings } from '../store/settings'
+import { createHackerGear, hackerOutfit } from './hackerGear'
 import type { AgentView } from '../store/agents'
 import { AnimationController } from './AnimationController'
 import { agentDebug } from './debug'
@@ -57,10 +58,24 @@ export const PLACE_DEBOUNCE_MS = 1000
 
 export function AgentCharacter({ agent }: { agent: AgentView }) {
   const showcase = useSettings((s) => s.showcase)
+  const scene = useSettings((s) => s.scene)
   const overlayRef = useRef<Sprite>(null)
   const tagRef = useRef<Group>(null)
 
-  const rig = useMemo(() => buildRig(agent.character, agent.style), [agent.character, agent.style])
+  const rig = useMemo(
+    () => buildRig(agent.character, scene === 'hacker' ? hackerOutfit(agent.style) : agent.style),
+    [agent.character, agent.style, scene],
+  )
+  // Hacker scene: neon glasses + headset on the head bone.
+  const gear = useMemo(() => (scene === 'hacker' ? createHackerGear(rig.gear) : null), [rig, scene])
+  useEffect(() => {
+    if (!gear) return
+    rig.bones.head.add(gear.group)
+    return () => {
+      rig.bones.head.remove(gear.group)
+      gear.dispose()
+    }
+  }, [gear, rig])
   const controller = useMemo(
     () => new AnimationController(rig.root, clipsForRig(rig), CHIBI_MANIFEST, RESOLVED),
     [rig],

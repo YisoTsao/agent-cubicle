@@ -8,6 +8,7 @@ import {
   SRGBColorSpace,
 } from 'three'
 import { PALETTE } from '../config/render'
+import { THEMES, type Palette, type SceneId } from '../config/themes'
 
 // Shared, app-lifetime materials. Reusing instances keeps shader programs and state changes low;
 // never create materials inline in props (SPEC §6 — material sharing).
@@ -15,6 +16,11 @@ import { PALETTE } from '../config/render'
 type Key = keyof typeof PALETTE
 
 const cache = new Map<string, MeshStandardMaterial>()
+/** Which palette keys each shared material is made from (so a theme change can recolour it). */
+const recipes = new Map<string, { color: Key; emissive?: Key }>()
+
+/** The active palette; materials created later start from it. */
+let current: Palette = PALETTE
 
 function make(
   name: string,
@@ -25,16 +31,47 @@ function make(
   if (existing) return existing
   const mat = new MeshStandardMaterial({
     name,
-    color: new Color(PALETTE[color]),
+    color: new Color(current[color]),
     roughness: opts.roughness ?? 0.75,
     metalness: opts.metalness ?? 0,
   })
   if (opts.emissive) {
-    mat.emissive = new Color(PALETTE[opts.emissive])
+    mat.emissive = new Color(current[opts.emissive])
     mat.emissiveIntensity = opts.emissiveIntensity ?? 1
   }
   cache.set(name, mat)
+  recipes.set(name, { color, ...(opts.emissive ? { emissive: opts.emissive } : {}) })
   return mat
+}
+
+/** Dark floor with a glowing grid (the hacker scene). */
+function gridTexture(): CanvasTexture {
+  const size = 512
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = current.floorWood
+  ctx.fillRect(0, 0, size, size)
+  const cells = 4
+  const step = size / cells
+  ctx.strokeStyle = '#19e3ff'
+  ctx.shadowColor = '#19e3ff'
+  ctx.shadowBlur = 6
+  ctx.lineWidth = 2
+  ctx.globalAlpha = 0.55
+  for (let i = 0; i <= cells; i++) {
+    ctx.beginPath()
+    ctx.moveTo(i * step, 0)
+    ctx.lineTo(i * step, size)
+    ctx.moveTo(0, i * step)
+    ctx.lineTo(size, i * step)
+    ctx.stroke()
+  }
+  const tex = new CanvasTexture(canvas)
+  tex.colorSpace = SRGBColorSpace
+  tex.wrapS = tex.wrapT = RepeatWrapping
+  tex.anisotropy = 8
+  return tex
 }
 
 /** Subtle plank pattern so the floor reads as wood without any downloaded texture. */
@@ -43,8 +80,8 @@ function plankTexture(): CanvasTexture {
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = size
   const ctx = canvas.getContext('2d')!
-  const base = new Color(PALETTE.floorWood)
-  const dark = new Color(PALETTE.floorWoodDark)
+  const base = new Color(current.floorWood)
+  const dark = new Color(current.floorWoodDark)
   const rows = 10
   const rowH = size / rows
   let seed = 7
@@ -105,14 +142,44 @@ function windowPaneTexture(): CanvasTexture {
 }
 
 let floorMat: MeshStandardMaterial | null = null
+let floorKind: 'plank' | 'grid' = 'plank'
 let sunPatchMat: MeshBasicMaterial | null = null
+
+/**
+ * Re-dress every shared material for a scene theme, in place: merged static furniture keeps its
+ * material instances, so nothing needs rebuilding.
+ */
+export function applyMaterialTheme(id: SceneId): void {
+  const theme = THEMES[id]
+  current = theme.palette
+  floorKind = theme.floor
+  for (const [name, mat] of cache) {
+    const r = recipes.get(name)
+    if (!r) continue
+    mat.color.set(current[r.color])
+    if (r.emissive) mat.emissive.set(current[r.emissive])
+  }
+  if (floorMat) {
+    floorMat.map?.dispose()
+    const map = theme.floor === 'grid' ? gridTexture() : plankTexture()
+    map.repeat.set(theme.floor === 'grid' ? 1.35 : 2.7, theme.floor === 'grid' ? 1.35 : 2.7)
+    floorMat.map = map
+    floorMat.roughness = theme.floor === 'grid' ? 0.35 : 0.62
+    floorMat.needsUpdate = true
+  }
+  sunPatchMat?.color.set(current.sunPatch)
+}
 
 export const materials = {
   get floor() {
     if (!floorMat) {
-      const map = plankTexture()
-      map.repeat.set(2.7, 2.7)
-      floorMat = new MeshStandardMaterial({ name: 'floor', map, roughness: 0.62 })
+      const map = floorKind === 'grid' ? gridTexture() : plankTexture()
+      map.repeat.set(floorKind === 'grid' ? 1.35 : 2.7, floorKind === 'grid' ? 1.35 : 2.7)
+      floorMat = new MeshStandardMaterial({
+        name: 'floor',
+        map,
+        roughness: floorKind === 'grid' ? 0.35 : 0.62,
+      })
     }
     return floorMat
   },
@@ -121,7 +188,7 @@ export const materials = {
       sunPatchMat = new MeshBasicMaterial({
         name: 'sunPatch',
         map: windowPaneTexture(),
-        color: new Color(PALETTE.sunPatch),
+        color: new Color(current.sunPatch),
         transparent: true,
         opacity: 0.6,
         blending: AdditiveBlending,

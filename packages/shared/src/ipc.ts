@@ -81,8 +81,12 @@ export interface CubicleIntegrationApi {
 export interface UserSettings {
   quality: 'high' | 'balanced' | 'low'
   alwaysOnTop: boolean
-  /** Character id, or 'auto' (a different one per agent). */
+  /** Character id, or 'duo' / 'auto'. */
   character: string
+  /** Scene theme id ('office' | 'hacker'). */
+  scene: string
+  /** 'iso' = fixed isometric view, 'free' = orbit / zoom with the mouse. */
+  camera: 'iso' | 'free'
 }
 
 export interface CubicleSettingsApi {

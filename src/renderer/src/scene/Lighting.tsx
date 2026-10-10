@@ -1,5 +1,7 @@
 import { Environment, Lightformer } from '@react-three/drei'
+import { THEMES } from '../config/themes'
 import { LIGHTING } from '../config/render'
+import { useSettings } from '../store/settings'
 import { useQuality } from './useQuality'
 
 // Key light (sun through the window side) + sky/ground fill + a procedural IBL for soft
@@ -7,7 +9,9 @@ import { useQuality } from './useQuality'
 
 export function Lighting() {
   const q = useQuality()
-  const { sun, hemisphere } = LIGHTING
+  const theme = THEMES[useSettings((s) => s.scene)]
+  const { sun: themeSun, hemisphere, accents } = theme.lighting
+  const sun = { ...LIGHTING.sun, ...themeSun }
   const e = sun.shadowExtent
   return (
     <>
@@ -28,7 +32,17 @@ export function Lighting() {
         shadow-camera-near={1}
         shadow-camera-far={30}
       />
-      <Environment resolution={64} environmentIntensity={LIGHTING.environmentIntensity}>
+      {accents.map((a, i) => (
+        <pointLight
+          key={i}
+          color={a.color}
+          position={a.position}
+          intensity={a.intensity}
+          distance={a.distance}
+          decay={2}
+        />
+      ))}
+      <Environment resolution={64} environmentIntensity={theme.lighting.environmentIntensity}>
         <Lightformer
           form="rect"
           intensity={2}

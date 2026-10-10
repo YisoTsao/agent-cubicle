@@ -80,7 +80,7 @@ export function Room() {
   )
 }
 
-const WINDOW = { cx: -0.3, cy: 1.75, w: 1.4, h: 1.1 }
+export const WINDOW = { cx: -0.3, cy: 1.75, w: 1.4, h: 1.1 }
 
 /** Direction of the fake sun shaft through the window, per metre of drop (x, z). */
 const SUN_SLOPE = { x: 0.38, z: 0.92 }

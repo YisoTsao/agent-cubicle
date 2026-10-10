@@ -21,6 +21,7 @@ import {
   type Material,
 } from 'three'
 import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import type { GearFrame } from '../hackerGear'
 import { buildBodyShell, frontZ, shellGeometry, type BodyShell } from './plushBody'
 import type { RigProfile } from './profile'
 import { BONE_NAMES, createBones, restPosition, type BoneName, type BoneRest } from './skeleton'
@@ -249,15 +250,16 @@ export function plushProfile(design: PlushDesign): RigProfile {
     limb: { upperArm: 0.19, forearm: 0.18 },
     restLimb: { upperArm: (372 - 300) * K, forearm: (445 - 372) * K },
     posture: {
-      sit: { hipsY: 0.66, hipsZ: -0.05, lean: 0.1 },
-      sofa: { hipsY: 0.64, hipsZ: -0.06, lean: -0.2 },
+      sit: { hipsY: 0.745, hipsZ: -0.01, lean: 0.06 },
+      sofa: { hipsY: 0.795, hipsZ: 0.09, lean: -0.1 },
       stand: { hipsY: Y(457), hipsZ: 0, lean: 0.03 },
     },
     walkSwing: 1.5,
     tagHeight: 0.6,
     overlayHeight: 0.84,
     overlaySize: 0.36,
-    legs: { sit: [-1.5, 0.15, 0.12], sofa: [-1.42, 0.2, 0.14] },
+    // The plush sits on its bottom like a toy: the stubby legs stay under it instead of bending.
+    legs: { sit: [0, 0, 0.05], sofa: [0, 0, 0.05] },
   }
 }
 
@@ -596,6 +598,7 @@ export interface PlushRig {
   mesh: SkinnedMesh
   bones: ReturnType<typeof createBones>
   profile: RigProfile
+  gear: GearFrame
   dispose(): void
 }
 
@@ -767,11 +770,38 @@ export function buildPlushRig(design: PlushDesign): PlushRig {
     mesh,
     bones,
     profile,
+    gear: gearFrame(design),
     dispose() {
       geometry.dispose()
       Object.values(materials).forEach((m) => m.dispose())
       mesh.skeleton.dispose()
     },
+  }
+}
+
+/** Glasses / headset fit for this head, from its outline table (head-bone local metres). */
+function gearFrame(design: PlushDesign): GearFrame {
+  const hwAt = (h: number): number => {
+    const t = design.head
+    for (let i = 1; i < t.length; i++) {
+      const [r1, h1] = t[i]!
+      const [r0, h0] = t[i - 1]!
+      if (h <= h1) return r0 + ((r1 - r0) * (h - h0)) / Math.max(1e-6, h1 - h0)
+    }
+    return 0
+  }
+  const maxHw = Math.max(...design.head.map(([w]) => w))
+  // The crown: highest row that is still nearly full width (ears above it are not covered).
+  const crown = Math.max(...design.head.filter(([w]) => w >= maxHw * 0.8).map(([, h]) => h))
+  const eyeZ = surfaceZ(design, design.eye.x, design.eye.y)
+  return {
+    eyeX: design.eye.x * K,
+    eyeY: design.eye.y * K,
+    eyeZ: eyeZ * K,
+    eyeR: 11 * K,
+    headHalfW: hwAt(design.eye.y) * K,
+    crown: crown * K,
+    faceZ: eyeZ * K + 0.02,
   }
 }
 

@@ -1,8 +1,11 @@
 import { ContactShadows } from '@react-three/drei'
-import { memo } from 'react'
+import { memo, useLayoutEffect } from 'react'
 import { AgentCharacter } from '../characters/AgentCharacter'
 import { PRESENTATION } from '../characters/presentation'
 import { useAgents } from '../store/agents'
+import { useSettings } from '../store/settings'
+import { HackerDecor } from './props/HackerDecor'
+import { applyMaterialTheme } from './materials'
 import { BackWall, TerminalScreens } from './props/BackWall'
 import { Lounge } from './props/Lounge'
 import { Room, ROOM } from './props/Room'
@@ -26,10 +29,14 @@ const StaticFurniture = memo(function StaticFurniture() {
 export function OfficeScene() {
   const agents = useAgents((s) => s.agents)
   const generation = useAgents((s) => s.generation)
+  const scene = useSettings((s) => s.scene)
+  // Recolour the shared materials before paint when the scene theme changes.
+  useLayoutEffect(() => applyMaterialTheme(scene), [scene])
 
   return (
     <group>
       <StaticFurniture />
+      {scene === 'hacker' && <HackerDecor />}
 
       {/* Live props driven by agent state */}
       {WORKSTATIONS.map((ws) => {

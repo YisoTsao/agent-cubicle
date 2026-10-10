@@ -1,23 +1,17 @@
 import { useFrame } from '@react-three/fiber'
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { Color, Group, InstancedMesh, Matrix4 } from 'three'
-import { PALETTE } from '../../config/render'
+import { THEMES } from '../../config/themes'
+import { useSettings } from '../../store/settings'
 import { materials } from '../materials'
 import { Block, Cyl } from '../primitives'
+import { COFFEE_BAR, TERMINAL } from './layout'
 import { Plant } from './Plant'
 import { ROOM } from './Room'
 
 // Back-right wall (z = -3): bookshelf (READ), terminal console + server rack (EXEC).
 
-export const TERMINAL = {
-  /** Standing spot in front of the terminal console (world x, z). */
-  stand: [1.0, -1.88] as const,
-}
-
-export const COFFEE_BAR = {
-  /** Standing spot in front of the coffee bar (world x, z). */
-  stand: [-0.3, -1.95] as const,
-}
+export { COFFEE_BAR, TERMINAL } from './layout'
 
 const WALL_Z = -ROOM.half
 
@@ -73,15 +67,8 @@ function Bookshelf() {
   )
 }
 
-const BOOK_COLORS = [
-  PALETTE.terracotta,
-  PALETTE.mustard,
-  PALETTE.dustyBlue,
-  PALETTE.sage,
-  PALETTE.offWhite,
-  PALETTE.blush,
-  PALETTE.woodDark,
-]
+/** Number of distinct spine colours a theme provides (layout stores an index into them). */
+const BOOK_COLOR_COUNT = 7
 
 /** All books are one InstancedMesh → a single draw call (SPEC §6). */
 function Books({
@@ -96,6 +83,7 @@ function Books({
   depth: number
 }) {
   const ref = useRef<InstancedMesh>(null)
+  const bookColors = THEMES[useSettings((s) => s.scene)].bookColors
   const layout = useMemo(
     () => buildBookLayout(shelfWidth, shelfStep, shelves, depth),
     [shelfWidth, shelfStep, shelves, depth],
@@ -107,11 +95,11 @@ function Books({
     const c = new Color()
     layout.forEach((b, i) => {
       mesh.setMatrixAt(i, bookMatrix(b))
-      mesh.setColorAt(i, c.set(b.color))
+      mesh.setColorAt(i, c.set(bookColors[b.color % bookColors.length]!))
     })
     mesh.instanceMatrix.needsUpdate = true
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
-  }, [layout])
+  }, [layout, bookColors])
 
   return (
     <instancedMesh
@@ -133,7 +121,8 @@ interface BookSpec {
   h: number
   d: number
   tilt: number
-  color: string
+  /** Index into the theme's book colours. */
+  color: number
 }
 
 function bookMatrix(b: BookSpec): Matrix4 {
@@ -162,7 +151,7 @@ function buildBookLayout(width: number, step: number, shelves: number, depth: nu
         h,
         d: depth * (0.7 + rand() * 0.15),
         tilt: lean ? -0.25 : 0,
-        color: BOOK_COLORS[Math.floor(rand() * BOOK_COLORS.length)]!,
+        color: Math.floor(rand() * BOOK_COLOR_COUNT),
       })
       x += w + 0.004
       if (lean) break

@@ -1,4 +1,4 @@
-import { COFFEE_BAR, TERMINAL } from '../scene/props/BackWall'
+import { COFFEE_BAR, TERMINAL } from '../scene/props/layout'
 import { LOUNGE } from '../scene/props/Lounge'
 import { WORKSTATIONS, seatOf } from '../scene/props/WorkDesk'
 import type { ClipRole } from './manifest'
@@ -18,12 +18,32 @@ export interface Place {
   /** Facing when settled: direction (sin yaw, cos yaw). */
   yaw: number
   approach: XZ
+  /** Waypoints from the hub to `pos` (default: just `approach`), to get around furniture. */
+  route?: readonly XZ[]
   posture: Extract<ClipRole, 'sit' | 'sit_sofa' | 'stand'>
 }
 
 const FACE_PLUS_X = Math.PI / 2
 const FACE_MINUS_Z = Math.PI
 const FACE_CAMERA = Math.PI / 4
+
+/**
+ * Desks: how to get in and out without brushing the desk end or the wall. Desk A's chair sits
+ * between the wall and the desk end (a plush needs the wide lane); desk B is entered from the
+ * north, between the desk end and the chair.
+ */
+const DESK_ROUTES: Record<string, Pick<Place, 'route'>> = {
+  'desk-a': {
+    route: [
+      [-1.5, -0.35],
+      [-2.3, -0.4],
+      [-2.3, -1.0],
+    ],
+  },
+  'desk-b': {
+    route: [[0.5, 0.0]],
+  },
+}
 
 function deskPlace(index: number): Place {
   const ws = WORKSTATIONS[index]!
@@ -34,7 +54,8 @@ function deskPlace(index: number): Place {
     group: ws.id,
     pos: [x, z],
     yaw: FACE_PLUS_X,
-    approach: [x, ws.center[1] + 0.95],
+    approach: [x, ws.center[1] + 1.15],
+    ...DESK_ROUTES[ws.id],
     posture: 'sit',
   }
 }
@@ -68,15 +89,19 @@ const ALL: Place[] = [
     group: 'lounge',
     pos: [lx, lz],
     yaw: FACE_PLUS_X,
-    approach: [lx + 0.6, lz - 0.55],
+    approach: [-1.4, lz - 0.1],
     posture: 'sit_sofa',
   },
   {
     id: 'lounge:1',
     group: 'lounge',
-    pos: [lx, lz + 0.72],
+    pos: [lx, lz + 0.85],
     yaw: FACE_PLUS_X,
-    approach: [lx + 0.55, lz + 0.2],
+    approach: [-1.4, lz + 0.8],
+    route: [
+      [-1.4, lz - 0.1],
+      [-1.4, lz + 0.8],
+    ],
     posture: 'sit_sofa',
   },
   {
@@ -92,17 +117,17 @@ const ALL: Place[] = [
   {
     id: 'wait:0',
     group: 'wait',
-    pos: [0.35, -0.6],
+    pos: [0.0, -0.7],
     yaw: FACE_CAMERA,
-    approach: [0.35, -0.6],
+    approach: [0.0, -0.7],
     posture: 'stand',
   },
   {
     id: 'wait:1',
     group: 'wait',
-    pos: [-0.5, 0.85],
+    pos: [1.0, -0.9],
     yaw: FACE_CAMERA,
-    approach: [-0.5, 0.85],
+    approach: [1.0, -0.9],
     posture: 'stand',
   },
 ]
@@ -118,4 +143,4 @@ export const PLACE_GROUPS: Record<string, string[]> = ALL.reduce<Record<string, 
 )
 
 /** Open floor junction every route passes through. */
-export const HUB: XZ = [-0.5, -0.35]
+export const HUB: XZ = [-0.5, 0.1]

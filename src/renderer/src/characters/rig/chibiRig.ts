@@ -16,6 +16,7 @@ import {
   Vector3,
 } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import type { GearFrame } from '../hackerGear'
 import { CHIBI_PROFILE, type RigProfile } from './profile'
 import { BONE_NAMES, createBones, restPosition, type BoneName } from './skeleton'
 
@@ -46,6 +47,8 @@ export interface ChibiRig {
   mesh: SkinnedMesh
   bones: ReturnType<typeof createBones>
   profile: RigProfile
+  /** Where glasses and a headset fit (head-bone local metres). */
+  gear: GearFrame
   dispose(): void
 }
 
@@ -270,6 +273,15 @@ export function buildChibiRig(style: ChibiStyle = DEFAULT_STYLE): ChibiRig {
     mesh,
     bones,
     profile: CHIBI_PROFILE,
+    gear: {
+      eyeX: 0.075,
+      eyeY: 0.19,
+      eyeZ: 0.2,
+      eyeR: 0.027,
+      headHalfW: 0.225,
+      crown: 0.45,
+      faceZ: 0.21,
+    },
     dispose() {
       geometry.dispose()
       material.dispose()

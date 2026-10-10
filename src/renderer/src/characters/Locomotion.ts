@@ -10,6 +10,11 @@ export const MAX_DT = 1 / 20
 
 export type LocoState = 'settled' | 'walking' | 'turning'
 
+/** Waypoints from the hub to a place's slot (excluding both). */
+function inbound(p: Place): readonly XZ[] {
+  return p.route ?? [p.approach]
+}
+
 export class Locomotion {
   x: number
   z: number
@@ -41,8 +46,8 @@ export class Locomotion {
     if (target.id === this.place.id && this.state !== 'walking') return
     const route: XZ[] = []
     // Leave the current spot via its approach point unless we're already mid-walk.
-    if (this.state !== 'walking') route.push(this.place.approach)
-    route.push(HUB, target.approach, target.pos)
+    if (this.state !== 'walking') route.push(...[...inbound(this.place)].reverse())
+    route.push(HUB, ...inbound(target), target.pos)
     this.path = dedupe(route)
     this.place = target
     this.state = 'walking'

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { HookPlanView, IntegrationStatus } from '@shared/ipc'
 import type { QualityLevel } from '../config/render'
 import { CHARACTERS } from '../characters/roster'
+import { SCENE_IDS, THEMES } from '../config/themes'
 import { useAgents } from '../store/agents'
 import { useSettings } from '../store/settings'
 
@@ -63,6 +64,11 @@ export function IntegrationPanel({ onClose }: { onClose(): void }) {
   const setAlwaysOnTop = useSettings((s) => s.setAlwaysOnTop)
   const choice = useAgents((s) => s.choice)
   const setCharacter = useSettings((s) => s.setCharacter)
+  const scene = useSettings((s) => s.scene)
+  const setScene = useSettings((s) => s.setScene)
+  const camera = useSettings((s) => s.camera)
+  const setCamera = useSettings((s) => s.setCamera)
+  const resetCamera = useSettings((s) => s.resetCamera)
 
   return (
     <div className="panel" role="dialog" aria-label="設定與連接" data-testid="integration-panel">
@@ -99,6 +105,58 @@ export function IntegrationPanel({ onClose }: { onClose(): void }) {
           />{' '}
           視窗永遠置頂
         </label>
+      </section>
+
+      <section>
+        <h3>場景</h3>
+        <div className="characters" role="radiogroup" aria-label="場景" data-testid="scene-picker">
+          {SCENE_IDS.map((id) => (
+            <button
+              key={id}
+              role="radio"
+              aria-checked={scene === id}
+              className={`character-chip${scene === id ? ' primary' : ''}`}
+              data-testid={`scene-${id}`}
+              title={THEMES[id].note}
+              onClick={() => setScene(id)}
+            >
+              <span className="swatch" style={{ background: THEMES[id].background }} />
+              {THEMES[id].name}
+            </button>
+          ))}
+        </div>
+        <p className="muted small">換場景只改佈置與燈光，家具位置與角色動線都一樣。</p>
+      </section>
+
+      <section>
+        <h3>視角</h3>
+        <div className="row" role="radiogroup" aria-label="視角" data-testid="camera-picker">
+          {(
+            [
+              ['iso', '固定等角'],
+              ['free', '自由旋轉'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              role="radio"
+              aria-checked={camera === value}
+              className={camera === value ? 'primary' : ''}
+              data-testid={`camera-${value}`}
+              onClick={() => setCamera(value)}
+            >
+              {label}
+            </button>
+          ))}
+          {camera === 'free' && (
+            <button data-testid="camera-reset" onClick={resetCamera}>
+              重設視角
+            </button>
+          )}
+        </div>
+        <p className="muted small">
+          自由旋轉：左鍵拖曳轉動、滾輪縮放；切回固定等角會回到預設畫面。
+        </p>
       </section>
 
       <section>

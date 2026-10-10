@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { QualityLevel } from '../config/render'
 import { isChoice, type CharacterChoice } from '../characters/roster'
+import { DEFAULT_SCENE, isSceneId, type SceneId } from '../config/themes'
 import { forcedChoice, useAgents } from './agents'
 
 interface SettingsState {
@@ -16,10 +17,24 @@ interface SettingsState {
   setQuality(quality: QualityLevel): void
   setAlwaysOnTop(on: boolean): void
   setCharacter(choice: CharacterChoice): void
+  /** Scene theme (office / hacker). */
+  scene: SceneId
+  setScene(scene: SceneId): void
+  /** 'iso' = fixed isometric view, 'free' = orbit / zoom. */
+  camera: 'iso' | 'free'
+  setCamera(camera: 'iso' | 'free'): void
+  /** Bumped by the "reset view" button. */
+  cameraResets: number
+  resetCamera(): void
   toggleDiagnostics(): void
 }
 
 const params = new URLSearchParams(window.location.search)
+const urlScene = params.get('scene')
+const urlCamera = params.get('camera')
+const forcedScene: SceneId | null = isSceneId(urlScene) ? urlScene : null
+const forcedCamera: 'iso' | 'free' | null =
+  urlCamera === 'iso' || urlCamera === 'free' ? urlCamera : null
 const urlQuality = params.get('quality')
 /** A quality forced via URL (tests/screenshots) wins over the persisted preference. */
 const forcedQuality: QualityLevel | null =
@@ -44,6 +59,18 @@ export const useSettings = create<SettingsState>((set) => ({
     useAgents.getState().setChoice(choice)
     void window.cubicle.settings.set({ character: choice })
   },
+  scene: forcedScene ?? DEFAULT_SCENE,
+  setScene: (scene) => {
+    set({ scene })
+    void window.cubicle.settings.set({ scene })
+  },
+  camera: forcedCamera ?? 'iso',
+  setCamera: (camera) => {
+    set({ camera })
+    void window.cubicle.settings.set({ camera })
+  },
+  cameraResets: 0,
+  resetCamera: () => set((s) => ({ cameraResets: s.cameraResets + 1 })),
   toggleDiagnostics: () => set((s) => ({ showDiagnostics: !s.showDiagnostics })),
 }))
 
@@ -55,5 +82,7 @@ export function loadPersistedSettings(): void {
       ...(forcedQuality ? {} : { quality: s.quality }),
     })
     if (!forcedChoice && isChoice(s.character)) useAgents.getState().setChoice(s.character)
+    if (!forcedScene && isSceneId(s.scene)) useSettings.setState({ scene: s.scene })
+    if (!forcedCamera) useSettings.setState({ camera: s.camera })
   })
 }

@@ -1,6 +1,8 @@
 import { Canvas } from '@react-three/fiber'
 import { Suspense, useEffect, useState } from 'react'
-import { BACKGROUND, QUALITY_PRESETS, RENDERER } from './config/render'
+import { QUALITY_PRESETS, RENDERER } from './config/render'
+import { THEMES } from './config/themes'
+import { CameraControls } from './scene/CameraControls'
 import { Effects } from './scene/Effects'
 import { IsoCamera } from './scene/IsoCamera'
 import { Lighting } from './scene/Lighting'
@@ -28,6 +30,7 @@ function OfficeApp() {
   const showDiagnostics = useSettings((s) => s.showDiagnostics)
   const toggleDiagnostics = useSettings((s) => s.toggleDiagnostics)
   const showcase = useSettings((s) => s.showcase)
+  const scene = useSettings((s) => s.scene)
   const overflow = useAgents((s) => s.overflow)
   const [stats, setStats] = useState<RenderStats | null>(null)
   const [ready, setReady] = useState(false)
@@ -67,8 +70,9 @@ function OfficeApp() {
         frameloop={frameloop}
         onCreated={() => setReady(true)}
       >
-        <color attach="background" args={[BACKGROUND]} />
+        <color attach="background" args={[THEMES[scene].background]} />
         <IsoCamera />
+        <CameraControls />
         <Lighting />
         <Suspense fallback={null}>
           <OfficeScene />

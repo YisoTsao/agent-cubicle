@@ -16,10 +16,14 @@ const Bounds = z.object({
 /** 'auto' or the id of a built-in character (ids are lowercase words). */
 const CharacterId = z.string().regex(/^[a-z]{1,24}$/)
 
+const SceneId = z.string().regex(/^[a-z]{1,24}$/)
+
 export const AppSettingsSchema = z.object({
   quality: z.enum(['high', 'balanced', 'low']).catch('balanced'),
   alwaysOnTop: z.boolean().catch(false),
   character: CharacterId.catch('duo'),
+  scene: SceneId.catch('office'),
+  camera: z.enum(['iso', 'free']).catch('iso'),
   bounds: Bounds.optional().catch(undefined),
 })
 
@@ -31,6 +35,8 @@ export const SettingsPatch = z
     quality: z.enum(['high', 'balanced', 'low']),
     alwaysOnTop: z.boolean(),
     character: CharacterId,
+    scene: SceneId,
+    camera: z.enum(['iso', 'free']),
   })
   .partial()
   .strict()

@@ -73,6 +73,10 @@ function rendererQuery(): Record<string, string> {
   if (env['CUBICLE_CLEAN_CAPTURE'] === '1') q['cleanCapture'] = '1'
   const character = env['CUBICLE_CHARACTER']
   if (character && /^[a-z]{1,24}$/.test(character)) q['character'] = character
+  const scene = env['CUBICLE_SCENE']
+  if (scene && /^[a-z]{1,24}$/.test(scene)) q['scene'] = scene
+  const camera = env['CUBICLE_CAMERA']
+  if (camera === 'iso' || camera === 'free') q['camera'] = camera
   const preview = env['CUBICLE_PREVIEW']
   if (preview && /^[a-z=&,_0-9.]{1,120}$/.test(preview)) q['preview'] = preview
   const state = env['CUBICLE_STATE']

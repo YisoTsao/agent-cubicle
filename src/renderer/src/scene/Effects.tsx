@@ -1,5 +1,6 @@
 import { Bloom, EffectComposer, N8AO, SMAA, Vignette } from '@react-three/postprocessing'
 import type { ReactElement } from 'react'
+import { THEMES } from '../config/themes'
 import { useSettings } from '../store/settings'
 import { useQuality } from './useQuality'
 
@@ -7,6 +8,7 @@ import { useQuality } from './useQuality'
 export function Effects() {
   const q = useQuality()
   const cleanCapture = useSettings((s) => s.cleanCapture)
+  const theme = THEMES[useSettings((s) => s.scene)]
   const passes: ReactElement[] = []
   if (q.ambientOcclusion)
     passes.push(
@@ -24,12 +26,13 @@ export function Effects() {
       <Bloom
         key="bloom"
         mipmapBlur
-        intensity={0.55}
-        luminanceThreshold={0.9}
+        intensity={theme.bloom.intensity}
+        luminanceThreshold={theme.bloom.threshold}
         luminanceSmoothing={0.15}
       />,
     )
-  if (!cleanCapture) passes.push(<Vignette key="vignette" offset={0.35} darkness={0.35} />)
+  if (!cleanCapture)
+    passes.push(<Vignette key="vignette" offset={0.35} darkness={theme.vignette} />)
   if (q.antialias === 'smaa') passes.push(<SMAA key="smaa" />)
 
   return (

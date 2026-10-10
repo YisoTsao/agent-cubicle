@@ -7,7 +7,7 @@ import { ROOM } from './Room'
 
 export const LOUNGE = {
   /** Sofa seat anchor for an idle agent (world x, z). */
-  seat: [-2.3, 0.95] as const,
+  seat: [-2.3, 0.7] as const,
 }
 
 export function Lounge() {
@@ -53,8 +53,8 @@ export function Lounge() {
 
 function Sofa() {
   const x = -2.25
-  const z = 1.3
-  const len = 1.9
+  const z = 1.12
+  const len = 2.1
   return (
     <group position={[x, 0, z]}>
       <Block
@@ -85,38 +85,38 @@ function Sofa() {
       />
       {/* Seat cushions */}
       <Block
-        size={[0.56, 0.14, 0.73]}
-        position={[0.08, 0.46, 0.37]}
+        size={[0.56, 0.14, 0.83]}
+        position={[0.08, 0.46, 0.425]}
         material={materials.fabricSageLight}
         radius={0.06}
       />
       <Block
-        size={[0.56, 0.14, 0.73]}
-        position={[0.08, 0.46, -0.37]}
+        size={[0.56, 0.14, 0.83]}
+        position={[0.08, 0.46, -0.425]}
         material={materials.fabricSageLight}
         radius={0.06}
       />
       {/* Throw pillows */}
       <Block
         size={[0.14, 0.34, 0.34]}
-        position={[-0.1, 0.68, 0.55]}
+        position={[-0.1, 0.68, 0.65]}
         rotation={[0.15, 0, -0.2]}
         material={materials.fabricTerracotta}
         radius={0.07}
       />
       <Block
         size={[0.14, 0.3, 0.3]}
-        position={[-0.1, 0.66, -0.55]}
+        position={[-0.1, 0.66, -0.65]}
         rotation={[-0.1, 0, -0.2]}
         material={materials.fabricMustard}
         radius={0.07}
       />
       {/* Feet */}
       {[
-        [0.3, 0.8],
-        [0.3, -0.8],
-        [-0.3, 0.8],
-        [-0.3, -0.8],
+        [0.3, 0.9],
+        [0.3, -0.9],
+        [-0.3, 0.9],
+        [-0.3, -0.9],
       ].map(([fx, fz], i) => (
         <Cyl
           key={i}
@@ -210,7 +210,7 @@ function WallShelf() {
 
 function CoffeeTable() {
   return (
-    <group position={[-1.05, 0, 1.3]}>
+    <group position={[-0.55, 0, 1.3]}>
       <Cyl args={[0.42, 0.42, 0.05, 40]} position={[0, 0.4, 0]} material={materials.woodLight} />
       <Cyl args={[0.05, 0.08, 0.38, 16]} position={[0, 0.19, 0]} material={materials.woodMid} />
       <Cyl args={[0.24, 0.26, 0.03, 32]} position={[0, 0.015, 0]} material={materials.woodMid} />
