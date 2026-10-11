@@ -87,6 +87,10 @@ export interface UserSettings {
   scene: string
   /** 'iso' = fixed isometric view, 'free' = orbit / zoom with the mouse. */
   camera: 'iso' | 'free'
+  /** How many desks the office has: 2 (default), 4 or 6. */
+  desks: 2 | 4 | 6
+  /** Character per seat ("desk-a" … "desk-f", "wait:0", "wait:1"); unlisted seats use `character`. */
+  assignments: Record<string, string>
 }
 
 export interface CubicleSettingsApi {

@@ -18,12 +18,19 @@ const CharacterId = z.string().regex(/^[a-z]{1,24}$/)
 
 const SceneId = z.string().regex(/^[a-z]{1,24}$/)
 
+const Desks = z.union([z.literal(2), z.literal(4), z.literal(6)])
+
+/** Which character sits at which seat: keys are "desk-a" … "desk-f" and "wait:0" / "wait:1". */
+const Assignments = z.record(z.string().regex(/^(desk-[a-f]|wait:[0-9])$/), CharacterId)
+
 export const AppSettingsSchema = z.object({
   quality: z.enum(['high', 'balanced', 'low']).catch('balanced'),
   alwaysOnTop: z.boolean().catch(false),
   character: CharacterId.catch('duo'),
   scene: SceneId.catch('office'),
   camera: z.enum(['iso', 'free']).catch('iso'),
+  desks: Desks.catch(2),
+  assignments: Assignments.catch({}),
   bounds: Bounds.optional().catch(undefined),
 })
 
@@ -37,6 +44,8 @@ export const SettingsPatch = z
     character: CharacterId,
     scene: SceneId,
     camera: z.enum(['iso', 'free']),
+    desks: Desks,
+    assignments: Assignments,
   })
   .partial()
   .strict()

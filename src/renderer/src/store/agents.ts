@@ -27,6 +27,8 @@ export interface AgentView {
   style: ChibiStyle
   /** Which character is drawn (resolved from the user's choice). */
   character: CharacterId
+  /** The seat this agent's character belongs to: its desk id, or "wait:N" in the waiting area. */
+  seatKey: string
   /** Low-confidence (inferred) state from the reducer. */
   inferred: boolean
   detail?: string
@@ -44,6 +46,15 @@ interface AgentsState {
   /** The user's character choice (one for everybody, or 'auto' = one per agent). */
   choice: CharacterChoice
   setChoice(choice: CharacterChoice): void
+  /** Character per seat, overriding `choice` (persisted in the main process). */
+  assignments: Record<string, CharacterId>
+  /** Pick a character for one seat; null goes back to the default choice. */
+  assign(seatKey: string, character: CharacterId | null): void
+  /** Replace all assignments (loading persisted settings). */
+  setAssignments(assignments: Record<string, CharacterId>): void
+  /** The agent whose picker is open. */
+  selectedId: string | null
+  select(id: string | null): void
   applySnapshot(snapshot: StateSnapshot): void
   setState(id: string, state: PresentationState): void
   setSource(source: AgentSource): void
@@ -52,14 +63,19 @@ interface AgentsState {
 
 export const MANUAL_AGENT_ID = 'claude-code'
 
-function manualAgent(state: PresentationState, choice: CharacterChoice): AgentView {
+function manualAgent(
+  state: PresentationState,
+  choice: CharacterChoice,
+  assignments: Record<string, CharacterId>,
+): AgentView {
   return {
     id: MANUAL_AGENT_ID,
     name: 'Claude Code',
     state,
     deskId: WORKSTATIONS[0]!.id,
     style: styleFor('claude-code'),
-    character: characterFor(choice, 'claude-code', WORKSTATIONS[0]!.id),
+    character: characterFor(choice, 'claude-code', WORKSTATIONS[0]!.id, assignments),
+    seatKey: WORKSTATIONS[0]!.id,
     inferred: false,
   }
 }
@@ -67,6 +83,7 @@ function manualAgent(state: PresentationState, choice: CharacterChoice): AgentVi
 export function fromSnapshot(
   snapshot: StateSnapshot,
   choice: CharacterChoice,
+  assignments: Record<string, CharacterId>,
 ): { agents: AgentView[]; overflow: number } {
   const agents: AgentView[] = []
   let overflow = 0
@@ -79,6 +96,7 @@ export function fromSnapshot(
       overflow++
       continue
     }
+    const seatKey = desk?.id ?? `wait:${waiting}`
     if (!desk) waiting++
     const view: AgentView = {
       id: `${s.agentId}:${s.sessionId}`,
@@ -86,7 +104,8 @@ export function fromSnapshot(
       state: toPresentation(s),
       deskId: desk?.id ?? 'wait',
       style: styleFor(s.agentId),
-      character: characterFor(choice, s.agentId, desk?.id ?? 'wait'),
+      character: characterFor(choice, s.agentId, desk?.id ?? 'wait', assignments, seatKey),
+      seatKey,
       inferred: s.inferred,
     }
     if (s.detail !== undefined) view.detail = s.detail
@@ -108,45 +127,77 @@ const initialChoice = forcedChoice ?? DEFAULT_CHOICE
 
 let lastSnapshot: StateSnapshot = { sessions: [], overflow: 0 }
 
-export const useAgents = create<AgentsState>((set, get) => ({
-  source: initialManual ? 'manual' : 'live',
-  agents: initialManual ? [manualAgent(initialManual, initialChoice)] : [],
-  overflow: 0,
-  generation: 0,
-  choice: initialChoice,
-  setChoice: (choice) => {
-    if (choice === get().choice) return
-    const { source, agents } = get()
+export const useAgents = create<AgentsState>((set, get) => {
+  /** Re-resolve every agent's character after the choice or an assignment changed. */
+  const refresh = () => {
+    const { source, agents, choice, assignments } = get()
     set(
       source === 'live'
-        ? { choice, ...fromSnapshot(lastSnapshot, choice) }
+        ? fromSnapshot(lastSnapshot, choice, assignments)
         : {
-            choice,
-            agents: agents.map((a) => ({ ...a, character: characterFor(choice, a.id, a.deskId) })),
+            agents: agents.map((a) => ({
+              ...a,
+              character: characterFor(choice, a.id, a.deskId, assignments, a.seatKey),
+            })),
           },
     )
-  },
-  applySnapshot: (snapshot) => {
-    lastSnapshot = snapshot
-    if (get().source === 'live') set(fromSnapshot(snapshot, get().choice))
-  },
-  setState: (id, state) => {
-    if (get().source !== 'manual') {
-      set({ source: 'manual', agents: [manualAgent(state, get().choice)], overflow: 0 })
-      return
-    }
-    set((s) => ({ agents: s.agents.map((a) => (a.id === id ? { ...a, state } : a)) }))
-  },
-  setSource: (source) => {
-    if (source === get().source) return
-    set(
-      source === 'live'
-        ? { source, ...fromSnapshot(lastSnapshot, get().choice) }
-        : { source, agents: [manualAgent('WRITE', get().choice)], overflow: 0 },
-    )
-  },
-  respawn: () => set((s) => ({ generation: s.generation + 1 })),
-}))
+  }
+  return {
+    source: initialManual ? 'manual' : 'live',
+    agents: initialManual ? [manualAgent(initialManual, initialChoice, {})] : [],
+    overflow: 0,
+    generation: 0,
+    choice: initialChoice,
+    assignments: {},
+    selectedId: null,
+    select: (selectedId) => set({ selectedId }),
+    setChoice: (choice) => {
+      if (choice === get().choice) return
+      set({ choice })
+      refresh()
+    },
+    assign: (seatKey, character) => {
+      const next = { ...get().assignments }
+      if (character === null) delete next[seatKey]
+      else next[seatKey] = character
+      set({ assignments: next })
+      refresh()
+      void window.cubicle.settings.set({ assignments: next })
+    },
+    setAssignments: (assignments) => {
+      set({ assignments })
+      refresh()
+    },
+    applySnapshot: (snapshot) => {
+      lastSnapshot = snapshot
+      if (get().source === 'live') set(fromSnapshot(snapshot, get().choice, get().assignments))
+    },
+    setState: (id, state) => {
+      if (get().source !== 'manual') {
+        set({
+          source: 'manual',
+          agents: [manualAgent(state, get().choice, get().assignments)],
+          overflow: 0,
+        })
+        return
+      }
+      set((s) => ({ agents: s.agents.map((a) => (a.id === id ? { ...a, state } : a)) }))
+    },
+    setSource: (source) => {
+      if (source === get().source) return
+      set(
+        source === 'live'
+          ? { source, ...fromSnapshot(lastSnapshot, get().choice, get().assignments) }
+          : {
+              source,
+              agents: [manualAgent('WRITE', get().choice, get().assignments)],
+              overflow: 0,
+            },
+      )
+    },
+    respawn: () => set((s) => ({ generation: s.generation + 1 })),
+  }
+})
 
 /** Subscribe the store to main-process snapshots. Returns an unsubscribe function. */
 export function connectAgents(): () => void {

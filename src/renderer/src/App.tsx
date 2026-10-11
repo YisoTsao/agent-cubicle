@@ -12,6 +12,7 @@ import { FrameCap, usePageVisible } from './scene/FrameDriver'
 import { connectAgents, useAgents } from './store/agents'
 import { loadPersistedSettings, useSettings } from './store/settings'
 import { CharacterPreview } from './ui/CharacterPreview'
+import { AgentPicker } from './ui/AgentPicker'
 import { DevPanel } from './ui/DevPanel'
 import { IntegrationPanel } from './ui/IntegrationPanel'
 import { DevCameraProbe, installDevApi } from './ui/devApi'
@@ -96,6 +97,7 @@ function OfficeApp() {
           設定
         </button>
       )}
+      {!showcase && <AgentPicker />}
       {connectOpen && <IntegrationPanel onClose={() => setConnectOpen(false)} />}
       {showDiagnostics && <DiagnosticsPanel stats={stats} />}
       {showDiagnostics && !showcase && <DevPanel />}

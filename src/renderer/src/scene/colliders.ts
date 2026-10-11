@@ -1,4 +1,4 @@
-import { COFFEE_BAR, TERMINAL } from './props/layout'
+import { COFFEE_BAR, TERMINAL, roomExtra } from './props/layout'
 import { ROOM } from './props/Room'
 import { DESK, WORKSTATIONS } from './props/WorkDesk'
 
@@ -92,7 +92,16 @@ export const COLLIDERS: Collider[] = [
   box('rack', 2.2, 0.95, -ROOM.half + 0.38, 0.66, 1.9, 0.7),
   box('bookshelf', -2.0, 0.925, -ROOM.half + 0.19, 1.0, 1.85, 0.36),
   // Room walls (inner faces), as thick slabs.
-  box('wall-left', -ROOM.half - 0.5, 1.4, 0, 1.0, 2.8, ROOM.half * 2 + 1),
+  // The left wall is as long as the biggest office (6 desks); shorter offices simply never go there.
+  box(
+    'wall-left',
+    -ROOM.half - 0.5,
+    1.4,
+    roomExtra(6) / 2,
+    1.0,
+    2.8,
+    ROOM.half * 2 + 1 + roomExtra(6),
+  ),
   box('wall-back', 0, 1.4, -ROOM.half - 0.5, ROOM.half * 2 + 1, 2.8, 1.0),
 ]
 

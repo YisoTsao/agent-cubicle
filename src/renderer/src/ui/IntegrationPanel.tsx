@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import type { HookPlanView, IntegrationStatus } from '@shared/ipc'
 import type { QualityLevel } from '../config/render'
 import { CHARACTERS } from '../characters/roster'
+import { PLACE_GROUPS } from '../characters/places'
+import { activeWorkstations } from '../scene/props/WorkDesk'
+import { DESK_COUNTS } from '../scene/props/layout'
+import { seatLabel } from './AgentPicker'
 import { SCENE_IDS, THEMES } from '../config/themes'
 import { useAgents } from '../store/agents'
 import { useSettings } from '../store/settings'
@@ -69,6 +73,15 @@ export function IntegrationPanel({ onClose }: { onClose(): void }) {
   const camera = useSettings((s) => s.camera)
   const setCamera = useSettings((s) => s.setCamera)
   const resetCamera = useSettings((s) => s.resetCamera)
+  const desks = useSettings((s) => s.desks)
+  const setDesks = useSettings((s) => s.setDesks)
+  const agents = useAgents((s) => s.agents)
+  const assignments = useAgents((s) => s.assignments)
+  const assign = useAgents((s) => s.assign)
+  const seatKeys = [
+    ...activeWorkstations(desks).map((ws) => ws.id),
+    ...PLACE_GROUPS['wait']!.map((id) => id),
+  ]
 
   return (
     <div className="panel" role="dialog" aria-label="設定與連接" data-testid="integration-panel">
@@ -126,6 +139,27 @@ export function IntegrationPanel({ onClose }: { onClose(): void }) {
           ))}
         </div>
         <p className="muted small">換場景只改佈置與燈光，家具位置與角色動線都一樣。</p>
+      </section>
+
+      <section>
+        <h3>辦公室</h3>
+        <div className="row" role="radiogroup" aria-label="桌子數量" data-testid="desks-picker">
+          {DESK_COUNTS.map((n) => (
+            <button
+              key={n}
+              role="radio"
+              aria-checked={desks === n}
+              className={desks === n ? 'primary' : ''}
+              data-testid={`desks-${n}`}
+              onClick={() => setDesks(n)}
+            >
+              {n} 張桌子{n === 2 ? '（預設）' : ''}
+            </button>
+          ))}
+        </div>
+        <p className="muted small">
+          桌子越多，房間會往前延伸，同時可以有更多 agent 各自坐在自己的桌前；超過的會到等待區。
+        </p>
       </section>
 
       <section>
@@ -199,6 +233,38 @@ export function IntegrationPanel({ onClose }: { onClose(): void }) {
         <p className="muted small">
           換角色只改外觀，狀態與動作完全相同。「預設組合」是第一張桌小鴨、第二張桌 Kuro；「自動」依
           agent 分配不同角色；選單一角色則所有 agent 都用它。
+        </p>
+      </section>
+
+      <section>
+        <h3>每個座位的角色</h3>
+        <div className="seats" data-testid="seat-assignments">
+          {seatKeys.map((key) => {
+            const who = agents.find((a) => a.seatKey === key)
+            return (
+              <label key={key} className="seat-row small">
+                <span className="seat-row__name">
+                  {seatLabel(key)}
+                  <span className="muted"> {who ? who.name : '空位'}</span>
+                </span>
+                <select
+                  data-testid={`seat-${key}`}
+                  value={assignments[key] ?? ''}
+                  onChange={(e) => assign(key, e.target.value || null)}
+                >
+                  <option value="">跟隨上方設定</option>
+                  {CHARACTERS.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )
+          })}
+        </div>
+        <p className="muted small">
+          也可以直接點場景裡的角色來換。角色跟著座位走：同一張桌子上的 agent 總是這個角色。
         </p>
       </section>
 

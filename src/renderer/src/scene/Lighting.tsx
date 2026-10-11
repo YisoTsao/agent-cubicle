@@ -2,6 +2,7 @@ import { Environment, Lightformer } from '@react-three/drei'
 import { THEMES } from '../config/themes'
 import { LIGHTING } from '../config/render'
 import { useSettings } from '../store/settings'
+import { roomExtra } from './props/layout'
 import { useQuality } from './useQuality'
 
 // Key light (sun through the window side) + sky/ground fill + a procedural IBL for soft
@@ -12,7 +13,9 @@ export function Lighting() {
   const theme = THEMES[useSettings((s) => s.scene)]
   const { sun: themeSun, hemisphere, accents } = theme.lighting
   const sun = { ...LIGHTING.sun, ...themeSun }
-  const e = sun.shadowExtent
+  // A bigger office is shifted by -extra/2 along z, so the lights follow it and the shadow map grows.
+  const extra = roomExtra(useSettings((s) => s.desks))
+  const e = sun.shadowExtent + extra * 0.6
   return (
     <>
       <hemisphereLight args={[hemisphere.sky, hemisphere.ground, hemisphere.intensity]} />
@@ -36,7 +39,7 @@ export function Lighting() {
         <pointLight
           key={i}
           color={a.color}
-          position={a.position}
+          position={[a.position[0], a.position[1], a.position[2] - extra / 2]}
           intensity={a.intensity}
           distance={a.distance}
           decay={2}

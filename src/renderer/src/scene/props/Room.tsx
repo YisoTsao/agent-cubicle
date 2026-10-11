@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BufferGeometry, Float32BufferAttribute } from 'three'
+import { BufferGeometry, Float32BufferAttribute, PlaneGeometry } from 'three'
 import { materials } from '../materials'
 import { Block } from '../primitives'
 
@@ -10,29 +10,42 @@ export const ROOM = { half: 2.7, wallHeight: 2.8, wallThickness: 0.2, slabDepth:
 
 const { half, wallHeight: H, wallThickness: T, slabDepth: D } = ROOM
 
-export function Room() {
+/**
+ * Floor plane that is `extra` metres longer towards +z. UVs are stretched with it so planks and
+ * grid cells keep their size instead of being smeared.
+ */
+export function floorGeometry(extra: number): PlaneGeometry {
+  const g = new PlaneGeometry(half * 2, half * 2 + extra)
+  if (extra > 0) {
+    const uv = g.getAttribute('uv')
+    for (let i = 0; i < uv.count; i++) uv.setY(i, uv.getY(i) * (1 + extra / (half * 2)))
+  }
+  return g
+}
+
+export function Room({ extra = 0 }: { extra?: number }) {
+  const floor = useMemo(() => floorGeometry(extra), [extra])
   return (
     <group>
       {/* Floor slab (plank top + trim sides) */}
       <mesh
         receiveShadow
-        position={[0, -0.01, 0]}
+        position={[0, -0.01, extra / 2]}
         rotation={[-Math.PI / 2, 0, 0]}
         material={materials.floor}
-      >
-        <planeGeometry args={[half * 2, half * 2]} />
-      </mesh>
+        geometry={floor}
+      />
       <Block
-        size={[half * 2 + T, D, half * 2 + T]}
-        position={[-T / 2, -D / 2 - 0.02, -T / 2]}
+        size={[half * 2 + T, D, half * 2 + T + extra]}
+        position={[-T / 2, -D / 2 - 0.02, -T / 2 + extra / 2]}
         material={materials.woodDark}
         radius={0.06}
       />
 
       {/* Back-left wall (x = -half) */}
       <Block
-        size={[T, H, half * 2 + T]}
-        position={[-half - T / 2, H / 2, -T / 2]}
+        size={[T, H, half * 2 + T + extra]}
+        position={[-half - T / 2, H / 2, -T / 2 + extra / 2]}
         material={materials.wall}
         radius={0.04}
       />
@@ -46,8 +59,8 @@ export function Room() {
 
       {/* Baseboards */}
       <Block
-        size={[0.04, 0.12, half * 2]}
-        position={[-half + 0.02, 0.06, 0]}
+        size={[0.04, 0.12, half * 2 + extra]}
+        position={[-half + 0.02, 0.06, extra / 2]}
         material={materials.trim}
         radius={0.01}
         castShadow={false}
@@ -62,8 +75,8 @@ export function Room() {
 
       {/* Wall caps (thin trim on top edges for a finished model look) */}
       <Block
-        size={[T + 0.04, 0.06, half * 2 + T + 0.04]}
-        position={[-half - T / 2, H + 0.03, -T / 2]}
+        size={[T + 0.04, 0.06, half * 2 + T + 0.04 + extra]}
+        position={[-half - T / 2, H + 0.03, -T / 2 + extra / 2]}
         material={materials.woodMid}
         radius={0.02}
       />

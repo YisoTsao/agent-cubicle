@@ -6,8 +6,6 @@ import { expandScenario, scenarioByName, scenarioDuration } from '@shared/sim/sc
 // Owns the authoritative EventHub in the main process (SPEC §3): real clock, periodic tick for
 // timeouts, coalesced snapshot broadcast to renderers, and the dev-only scenario runner.
 
-/** Must match the renderer's WORKSTATIONS list. */
-const SEATS = 2
 const TICK_MS = 500
 
 export interface ScenarioRun {
@@ -18,7 +16,7 @@ export interface ScenarioRun {
 
 export class HubService {
   readonly hub: EventHub
-  private readonly defaults: Partial<HubConfig> = { seats: SEATS }
+  private seats = 2
   private tickTimer: ReturnType<typeof setInterval> | null = null
   private broadcastQueued = false
   private simTimers: ReturnType<typeof setTimeout>[] = []
@@ -27,6 +25,17 @@ export class HubService {
   constructor() {
     this.hub = new EventHub(Date.now, this.defaults)
     this.unsubscribe = this.hub.onChange(() => this.queueBroadcast())
+  }
+
+  /** Seats the hub assigns (the renderer's desk count). */
+  private get defaults(): Partial<HubConfig> {
+    return { seats: this.seats }
+  }
+
+  /** The office has this many desks now. */
+  setSeats(seats: number): void {
+    this.seats = seats
+    this.hub.setSeats(seats)
   }
 
   start(): void {

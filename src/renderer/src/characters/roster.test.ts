@@ -33,6 +33,21 @@ describe('roster', () => {
   })
 })
 
+describe('per-seat assignments', () => {
+  it("a seat's pinned character wins over the choice; others fall back to it", () => {
+    const pins = { 'desk-c': 'belle', 'wait:1': 'john' }
+    expect(characterFor('duo', 'x', 'desk-c', pins, 'desk-c')).toBe('belle')
+    expect(characterFor('nicky', 'x', 'desk-c', pins, 'desk-c')).toBe('belle')
+    expect(characterFor('duo', 'x', 'wait', pins, 'wait:1')).toBe('john')
+    expect(characterFor('duo', 'x', 'wait', pins, 'wait:0')).toBe('duck')
+    expect(characterFor('nicky', 'x', 'desk-a', pins, 'desk-a')).toBe('nicky')
+  })
+
+  it('ignores a pinned id that is not a character any more', () => {
+    expect(characterFor('duo', 'x', 'desk-b', { 'desk-b': 'gone' }, 'desk-b')).toBe('kuro')
+  })
+})
+
 describe.each(CHARACTERS.map((c) => c.id))('character %s', (id) => {
   it('builds a skinned rig bound to the shared skeleton, with every clip role playable', () => {
     const rig = buildRig(id, DEFAULT_STYLE)

@@ -63,7 +63,16 @@ export function isChoice(v: unknown): v is CharacterChoice {
 }
 
 /** Which character an agent is drawn as. 'auto' spreads agents over the roster by agent id. */
-export function characterFor(choice: CharacterChoice, agentId: string, deskId = ''): CharacterId {
+export function characterFor(
+  choice: CharacterChoice,
+  agentId: string,
+  deskId = '',
+  assignments: Readonly<Record<string, CharacterId>> = {},
+  seatKey = deskId,
+): CharacterId {
+  // Seats the user picked a character for come first (key = desk id, or "wait:N").
+  const pinned = assignments[seatKey]
+  if (pinned && BY_ID.has(pinned)) return pinned
   if (choice === 'duo') return deskId === 'desk-b' ? 'kuro' : 'duck'
   if (choice !== 'auto') return choice
   let h = 0

@@ -41,6 +41,8 @@ if (!app.requestSingleInstanceLock()) {
     hardenSession()
     const settings = new SettingsStore()
     app.on('before-quit', () => settings.flush())
+    const forced = Number(process.env['CUBICLE_DESKS'])
+    hub.setSeats(forced === 4 || forced === 6 ? forced : settings.get().desks)
     registerIpcHandlers(hub, integrations, settings)
     hub.start()
     void integrations.start()

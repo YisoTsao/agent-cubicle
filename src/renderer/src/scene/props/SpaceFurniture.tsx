@@ -2,9 +2,9 @@ import { useMemo } from 'react'
 import { S } from '../spaceMaterials'
 import { Ball, Block, Cyl } from '../primitives'
 import { Plant } from './Plant'
-import { ROOM, WINDOW } from './Room'
-import { DESK, WORKSTATIONS, type WorkstationSpec } from './WorkDesk'
-import { COFFEE_BAR, TERMINAL } from './layout'
+import { ROOM, WINDOW, floorGeometry } from './Room'
+import { DESK, activeWorkstations, type WorkstationSpec } from './WorkDesk'
+import { COFFEE_BAR, TERMINAL, roomExtra, type DeskCount } from './layout'
 
 // The space-station furniture set. Every solid piece keeps the footprint, height and seat
 // surface of its office counterpart (the collision tests and the walking routes rely on that),
@@ -180,24 +180,29 @@ function Gauges() {
   )
 }
 
-function Hull() {
+function Hull({ extra }: { extra: number }) {
   const deck = S.deck
+  const floor = useMemo(() => floorGeometry(extra), [extra])
   return (
     <group>
       {/* Deck plating */}
-      <mesh receiveShadow position={[0, -0.01, 0]} rotation={[-Math.PI / 2, 0, 0]} material={deck}>
-        <planeGeometry args={[half * 2, half * 2]} />
-      </mesh>
+      <mesh
+        receiveShadow
+        position={[0, -0.01, extra / 2]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        material={deck}
+        geometry={floor}
+      />
       <Block
-        size={[half * 2 + T, D, half * 2 + T]}
-        position={[-T / 2, -D / 2 - 0.02, -T / 2]}
+        size={[half * 2 + T, D, half * 2 + T + extra]}
+        position={[-T / 2, -D / 2 - 0.02, -T / 2 + extra / 2]}
         material={S.hullDark}
         radius={0.06}
       />
       {/* Bulkheads */}
       <Block
-        size={[T, H, half * 2 + T]}
-        position={[-half - T / 2, H / 2, -T / 2]}
+        size={[T, H, half * 2 + T + extra]}
+        position={[-half - T / 2, H / 2, -T / 2 + extra / 2]}
         material={S.wall}
         radius={0.04}
       />
@@ -209,8 +214,8 @@ function Hull() {
       />
       {/* Hazard skirting */}
       <Block
-        size={[0.05, 0.12, half * 2]}
-        position={[-half + 0.025, 0.06, 0]}
+        size={[0.05, 0.12, half * 2 + extra]}
+        position={[-half + 0.025, 0.06, extra / 2]}
         material={S.hazard}
         radius={0.01}
         castShadow={false}
@@ -224,8 +229,8 @@ function Hull() {
       />
       {/* Top rails */}
       <Block
-        size={[T + 0.04, 0.08, half * 2 + T + 0.04]}
-        position={[-half - T / 2, H + 0.04, -T / 2]}
+        size={[T + 0.04, 0.08, half * 2 + T + 0.04 + extra]}
+        position={[-half - T / 2, H + 0.04, -T / 2 + extra / 2]}
         material={S.hullDark}
         radius={0.02}
       />
@@ -244,8 +249,8 @@ function Hull() {
         castShadow={false}
       />
       <Block
-        size={[0.05, 0.03, half * 2 - 0.4]}
-        position={[-half + 0.04, H - 0.12, 0]}
+        size={[0.05, 0.03, half * 2 - 0.4 + extra]}
+        position={[-half + 0.04, H - 0.12, extra / 2]}
         material={S.light}
         radius={0.01}
         castShadow={false}
@@ -258,7 +263,7 @@ function Hull() {
       />
       <Pipe
         from={[-half + 0.12, 2.5, -half + 0.1]}
-        to={[-half + 0.12, 2.5, half - 0.1]}
+        to={[-half + 0.12, 2.5, half - 0.1 + extra]}
         r={0.045}
         material={S.hullMid}
       />
@@ -1027,11 +1032,11 @@ function HydroTower() {
 }
 
 /** The whole station set, to be wrapped in StaticBatch by the scene. */
-export function SpaceFurniture() {
+export function SpaceFurniture({ desks }: { desks: DeskCount }) {
   return (
     <group>
-      <Hull />
-      {WORKSTATIONS.map((ws) => (
+      <Hull extra={roomExtra(desks)} />
+      {activeWorkstations(desks).map((ws) => (
         <StationDesk key={ws.id} spec={ws} />
       ))}
       <Bench />

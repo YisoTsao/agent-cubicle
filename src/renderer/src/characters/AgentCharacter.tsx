@@ -14,6 +14,7 @@ import {
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { materials } from '../scene/materials'
 import { useSettings } from '../store/settings'
+import { useAgents } from '../store/agents'
 import { createSceneGear, isSuited, outfitFor } from './gear'
 import type { AgentView } from '../store/agents'
 import { AnimationController } from './AnimationController'
@@ -169,6 +170,14 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
   }, [agent.id, rig, loco, controller])
 
   const scratch = useMemo(() => ({ v: new Vector3(), w: new Vector3() }), [])
+  // Click target: skinned meshes are slow and unreliable to raycast, so a plain invisible
+  // cylinder around the body stands in (clicking opens the character picker for this seat).
+  const hitRef = useRef<Mesh>(null)
+  const hitGeometry = useMemo(
+    () => new CylinderGeometry(0.34, 0.34, 1.0, 12).translate(0, 0.5, 0),
+    [],
+  )
+  useEffect(() => () => hitGeometry.dispose(), [hitGeometry])
 
   useFrame(({ clock }, delta) => {
     const dt = showcase ? 0 : delta
@@ -177,6 +186,7 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
     const [ox, oz] = crowdOffset(agent.id, loco.x, loco.z, loco.yaw, loco.moving, dt)
     rig.root.position.set(loco.x + ox, 0, loco.z + oz)
     rig.root.rotation.y = loco.yaw
+    hitRef.current?.position.set(loco.x + ox, 0, loco.z + oz)
 
     // Base layers: posture from locomotion, gesture from presentation state.
     const settledPosture = loco.place.posture
@@ -242,6 +252,19 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
   return (
     <>
       <primitive object={rig.root} />
+      <mesh
+        ref={hitRef}
+        geometry={hitGeometry}
+        onClick={(e) => {
+          e.stopPropagation()
+          const { selectedId, select } = useAgents.getState()
+          select(selectedId === agent.id ? null : agent.id)
+        }}
+        onPointerOver={() => (document.body.style.cursor = 'pointer')}
+        onPointerOut={() => (document.body.style.cursor = '')}
+      >
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
       <primitive object={props.mug} />
       <primitive object={props.book} />
       <sprite ref={overlayRef} material={overlayMaterial} renderOrder={10} visible={false} />

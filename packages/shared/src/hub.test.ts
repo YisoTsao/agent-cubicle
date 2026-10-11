@@ -265,6 +265,18 @@ describe('ingestion (dedupe, ordering, validation)', () => {
     ])
   })
 
+  it('changing the seat count re-seats sessions (bigger or smaller office)', () => {
+    const { hub } = setup({ seats: 2, endedLingerMs: 1_000 })
+    for (const id of ['a', 'b', 'c', 'd']) hub.ingest(ev('SESSION_STARTED', { sessionId: id }))
+    const seats = () =>
+      Object.fromEntries(hub.snapshot().sessions.map((s) => [s.sessionId, s.seat]))
+    expect(seats()).toEqual({ a: 0, b: 1, c: undefined, d: undefined })
+    hub.setSeats(4) // a bigger office: the waiting sessions get desks, seated ones stay
+    expect(seats()).toEqual({ a: 0, b: 1, c: 2, d: 3 })
+    hub.setSeats(2) // smaller again: the extra desks are gone
+    expect(seats()).toEqual({ a: 0, b: 1, c: undefined, d: undefined })
+  })
+
   it('prefers the seat an agent used before', () => {
     const { hub, send, tick } = setup({ seats: 2, endedLingerMs: 0 })
     send('SESSION_STARTED', { agentId: 'codex', sessionId: 'x1' })

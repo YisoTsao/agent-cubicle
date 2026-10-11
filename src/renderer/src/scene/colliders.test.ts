@@ -15,6 +15,11 @@ import { THEMES, type SceneId } from '../config/themes'
 const GESTURES: Record<string, ClipRole[]> = {
   'desk-a': ['type_fast', 'sit_idle', 'read', 'think', 'wave_attention', 'confused', 'celebrate'],
   'desk-b': ['type_fast', 'sit_idle', 'read', 'think', 'wave_attention', 'confused', 'celebrate'],
+  // The extra rows (4- and 6-desk offices) are the same desks further along: two poses each.
+  'desk-c': ['type_fast', 'sit_idle'],
+  'desk-d': ['type_fast', 'sit_idle'],
+  'desk-e': ['type_fast', 'sit_idle'],
+  'desk-f': ['type_fast', 'sit_idle'],
   'lounge:0': ['idle_coffee', 'sit_idle'],
   'lounge:1': ['idle_coffee', 'sit_idle'],
   'terminal:0': ['stand_terminal', 'stand_idle'],

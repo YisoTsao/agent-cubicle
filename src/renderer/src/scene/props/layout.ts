@@ -17,3 +17,20 @@ export const COFFEE_BAR = {
   /** Standing spot in front of the coffee bar (world x, z). */
   stand: [-0.4, -1.95] as const,
 }
+
+/** How many desks the office has (the setting); 2 is the original room. */
+export const DESK_COUNTS = [2, 4, 6] as const
+export type DeskCount = (typeof DESK_COUNTS)[number]
+export const DEFAULT_DESKS: DeskCount = 2
+
+export function isDeskCount(n: unknown): n is DeskCount {
+  return DESK_COUNTS.includes(n as DeskCount)
+}
+
+/**
+ * Extra floor (metres, towards +z) the room grows by to make space for more desks. Each added row
+ * holds two desks side by side; rows are 2.6 m apart so a walking agent fits between them.
+ */
+export function roomExtra(desks: DeskCount): number {
+  return desks === 2 ? 0 : desks === 4 ? 2.85 : 5.45
+}

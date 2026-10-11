@@ -43,6 +43,43 @@ const DESK_ROUTES: Record<string, Pick<Place, 'route'>> = {
   'desk-b': {
     route: [[0.5, 0.0]],
   },
+  // Extra rows are reached from the open aisles: down the lane east of the sofa (x = -1.4), past
+  // the pouf, then along the central aisle (x = -0.5) between the two desk columns.
+  'desk-c': {
+    route: [
+      [-1.4, 0.3],
+      [-1.4, 3.0],
+      [-2.26, 3.0],
+      [-2.26, 3.5],
+    ],
+  },
+  'desk-d': {
+    route: [
+      [-1.4, 0.3],
+      [-1.4, 3.0],
+      [-0.5, 3.1],
+      [0.5, 3.1],
+    ],
+  },
+  'desk-e': {
+    route: [
+      [-1.4, 0.3],
+      [-1.4, 3.0],
+      [-0.5, 3.1],
+      [-0.5, 5.6],
+      [-2.26, 5.6],
+      [-2.26, 6.1],
+    ],
+  },
+  'desk-f': {
+    route: [
+      [-1.4, 0.3],
+      [-1.4, 3.0],
+      [-0.5, 3.1],
+      [-0.5, 6.1],
+      [0.5, 6.1],
+    ],
+  },
 }
 
 function deskPlace(index: number): Place {

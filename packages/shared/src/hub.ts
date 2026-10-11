@@ -81,6 +81,19 @@ export class EventHub {
     return this.cfg
   }
 
+  /**
+   * Change how many desks exist (the user's office size). Sessions on a desk that no longer exists
+   * lose their seat; free seats go to the oldest seatless sessions.
+   */
+  setSeats(seats: number): void {
+    if (seats === this.cfg.seats) return
+    this.cfg = { ...this.cfg, seats }
+    for (const s of this.sessions.values())
+      if (s.seat !== undefined && s.seat >= seats) delete s.seat
+    this.reseat()
+    this.emit()
+  }
+
   /** Adjust timings at runtime (dev simulator / settings). */
   configure(patch: Partial<HubConfig>): void {
     this.cfg = { ...this.cfg, ...patch }

@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path'
 import { _electron as electron } from '@playwright/test'
 import { isolatedEnv } from '../../tests/isolatedEnv'
 
-// Whole-window screenshots of the scenes, to judge the backdrop (moon / Earth / stars).
+// Whole-window screenshots. A scene id may carry a desk count ("office:6") to play the crowd scenario.
 //   tsx tools/preview/sky.ts <outDir> <scene>...
 // Run `pnpm build` first.
 
@@ -22,9 +22,15 @@ async function main(): Promise<void> {
       args: ['--force-device-scale-factor=2', root],
       env: {
         ...isolatedEnv(),
-        CUBICLE_SHOWCASE: '1',
         CUBICLE_QUALITY: 'balanced',
-        CUBICLE_SCENE: scene,
+        CUBICLE_SCENE: scene.split(':')[0]!,
+        ...(scene.includes(':')
+          ? {
+              CUBICLE_DESKS: scene.split(':')[1]!,
+              CUBICLE_SIMULATE: 'crowd',
+              CUBICLE_DIAGNOSTICS: '1',
+            }
+          : {}),
         CUBICLE_USER_DATA: mkdtempSync(join(tmpdir(), 'cubicle-sky-')),
       },
     })
@@ -34,8 +40,8 @@ async function main(): Promise<void> {
         BrowserWindow.getAllWindows()[0]!.setContentSize(1600, 900)
       })
       await page.waitForSelector('[data-testid="stage"][data-ready="true"]')
-      await page.waitForTimeout(2000)
-      const file = resolve(outDir, `${scene}.png`)
+      await page.waitForTimeout(scene.includes(':') ? 26000 : 2000)
+      const file = resolve(outDir, `${scene.replace(':', '-')}.png`)
       await page.screenshot({ path: file })
       console.log('wrote', file)
     } finally {

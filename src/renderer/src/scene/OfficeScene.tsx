@@ -13,21 +13,28 @@ import { applyMaterialTheme } from './materials'
 import { BackWall, TerminalScreens } from './props/BackWall'
 import { Lounge } from './props/Lounge'
 import { Room, ROOM } from './props/Room'
-import { DeskScreen, WORKSTATIONS, WorkDesk } from './props/WorkDesk'
+import { DeskScreen, activeWorkstations, WorkDesk } from './props/WorkDesk'
+import { roomExtra, type DeskCount } from './props/layout'
 import { StaticBatch } from './StaticBatch'
 
 /** Static furniture: memoized so agent updates never re-render (and re-allocate) the batched tree. */
-const StaticFurniture = memo(function StaticFurniture({ station }: { station: boolean }) {
+const StaticFurniture = memo(function StaticFurniture({
+  station,
+  desks,
+}: {
+  station: boolean
+  desks: DeskCount
+}) {
   if (station)
     return (
-      <StaticBatch key="space">
-        <SpaceFurniture />
+      <StaticBatch key={`space-${desks}`}>
+        <SpaceFurniture desks={desks} />
       </StaticBatch>
     )
   return (
-    <StaticBatch key="office">
-      <Room />
-      {WORKSTATIONS.map((ws) => (
+    <StaticBatch key={`office-${desks}`}>
+      <Room extra={roomExtra(desks)} />
+      {activeWorkstations(desks).map((ws) => (
         <WorkDesk key={ws.id} spec={ws} />
       ))}
       <Lounge />
@@ -40,32 +47,37 @@ export function OfficeScene() {
   const agents = useAgents((s) => s.agents)
   const generation = useAgents((s) => s.generation)
   const scene = useSettings((s) => s.scene)
+  const desks = useSettings((s) => s.desks)
+  const extra = roomExtra(desks)
   // Recolour the shared materials before paint when the scene theme changes.
   useLayoutEffect(() => applyMaterialTheme(scene), [scene])
 
   return (
     <group>
       <Sky />
-      <StaticFurniture station={THEMES[scene].furniture === 'space'} />
-      {scene === 'hacker' && <HackerDecor />}
-      {scene === 'night' && <NightDecor />}
+      {/* A bigger office grows towards +z; slide it back so the whole room stays centred. */}
+      <group position={[0, 0, -extra / 2]}>
+        <StaticFurniture station={THEMES[scene].furniture === 'space'} desks={desks} />
+        {scene === 'hacker' && <HackerDecor />}
+        {scene === 'night' && <NightDecor />}
 
-      {/* Live props driven by agent state */}
-      {WORKSTATIONS.map((ws) => {
-        const agent = agents.find((a) => a.deskId === ws.id)
-        return (
-          <DeskScreen
-            key={ws.id}
-            spec={ws}
-            mode={(agent && PRESENTATION[agent.state].screen) ?? 'idle'}
-          />
-        )
-      })}
-      <TerminalScreens active={agents.some((a) => PRESENTATION[a.state].terminal === 'active')} />
+        {/* Live props driven by agent state */}
+        {activeWorkstations(desks).map((ws) => {
+          const agent = agents.find((a) => a.deskId === ws.id)
+          return (
+            <DeskScreen
+              key={ws.id}
+              spec={ws}
+              mode={(agent && PRESENTATION[agent.state].screen) ?? 'idle'}
+            />
+          )
+        })}
+        <TerminalScreens active={agents.some((a) => PRESENTATION[a.state].terminal === 'active')} />
 
-      {agents.map((agent) => (
-        <AgentCharacter key={`${agent.id}#${generation}`} agent={agent} />
-      ))}
+        {agents.map((agent) => (
+          <AgentCharacter key={`${agent.id}#${generation}`} agent={agent} />
+        ))}
+      </group>
 
       {/* Soft ground shadow under the floating diorama */}
       <ContactShadows

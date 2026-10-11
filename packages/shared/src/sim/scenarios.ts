@@ -199,6 +199,45 @@ export const SCENARIOS: Scenario[] = [
   },
 ]
 
+const CROWD_AGENTS: ScenarioAgent[] = [
+  CLAUDE,
+  CODEX,
+  { agentId: 'aider', agentName: 'Aider' },
+  { agentId: 'gemini', agentName: 'Gemini CLI' },
+  { agentId: 'cursor', agentName: 'Cursor' },
+  { agentId: 'cline', agentName: 'Cline' },
+  { agentId: 'devin', agentName: 'Devin' },
+  { agentId: 'copilot', agentName: 'Copilot' },
+]
+const CROWD_KINDS: [string, ToolKind, string][] = [
+  ['Edit', 'WRITE', 'app.tsx'],
+  ['Read', 'READ', 'README.md'],
+  ['shell', 'EXEC', 'pnpm test'],
+  ['Edit', 'WRITE', 'store.ts'],
+  ['Read', 'READ', 'api.ts'],
+  ['shell', 'EXEC', 'cargo build'],
+  ['Edit', 'WRITE', 'lib.rs'],
+  ['Read', 'READ', 'notes.md'],
+]
+
+SCENARIOS.push({
+  name: 'crowd',
+  description: 'Eight agents at once: fills every desk of a big office, the rest wait',
+  agents: Object.fromEntries(CROWD_AGENTS.map((a, i) => [`s${i}`, a])),
+  steps: [
+    ...CROWD_AGENTS.flatMap((_, i): ScenarioStep[] => {
+      const [toolName, kind, detail] = CROWD_KINDS[i]!
+      const session = `s${i}`
+      return [
+        { at: i * 200, session, type: 'SESSION_STARTED' },
+        { at: i * 200 + 300, session, type: 'TASK_STARTED' },
+        ...tool(i * 200 + 800, 55_000, toolName, kind, detail, { session }),
+        { at: 70_000 + i * 200, session, type: 'SESSION_ENDED' },
+      ]
+    }),
+  ],
+})
+
 export const SCENARIO_NAMES = SCENARIOS.map((s) => s.name)
 
 export function scenarioByName(name: string): Scenario | undefined {

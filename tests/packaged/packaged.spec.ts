@@ -81,6 +81,8 @@ test('packaged app: guards, server and persisted settings', async () => {
       character: 'duck',
       scene: 'hacker',
       camera: 'free',
+      desks: 6,
+      assignments: { 'desk-c': 'belle' },
     }),
   )
   await app.close()
@@ -92,6 +94,8 @@ test('packaged app: guards, server and persisted settings', async () => {
     character: 'duck',
     scene: 'hacker',
     camera: 'free',
+    desks: 6,
+    assignments: { 'desk-c': 'belle' },
   })
   expect(
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isAlwaysOnTop()),

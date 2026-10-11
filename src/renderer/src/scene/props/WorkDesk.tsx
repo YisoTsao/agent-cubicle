@@ -24,7 +24,17 @@ export interface WorkstationSpec {
 export const WORKSTATIONS: readonly WorkstationSpec[] = [
   { id: 'desk-a', center: [-1.4, -1.58], decor: 'full' },
   { id: 'desk-b', center: [1.3, 0.7], decor: 'minimal' },
+  // Extra rows, only present when the office is set to 4 or 6 desks (the room grows to fit).
+  { id: 'desk-c', center: [-1.4, 4.3], decor: 'minimal' },
+  { id: 'desk-d', center: [1.3, 4.3], decor: 'minimal' },
+  { id: 'desk-e', center: [-1.4, 6.9], decor: 'minimal' },
+  { id: 'desk-f', center: [1.3, 6.9], decor: 'minimal' },
 ]
+
+/** The desks that exist for a given desk count. */
+export function activeWorkstations(desks: number): readonly WorkstationSpec[] {
+  return WORKSTATIONS.slice(0, desks)
+}
 
 export function seatOf(ws: WorkstationSpec): [number, number, number] {
   return [ws.center[0] + DESK.seatOffsetX, 0, ws.center[1]]

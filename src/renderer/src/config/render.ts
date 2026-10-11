@@ -57,6 +57,11 @@ export const CAMERA = {
   far: 100,
 }
 
+/** Bigger offices are taller on screen; zoom out to keep the whole room in view. */
+export function frameHeightFor(extra: number): number {
+  return CAMERA.frameHeight + extra * 0.55
+}
+
 export const LIGHTING = {
   sun: {
     position: [-6, 10, 5] as [number, number, number],

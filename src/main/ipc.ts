@@ -36,8 +36,8 @@ export function registerIpcHandlers(
   settings: SettingsStore,
 ): void {
   const userSettings = () => {
-    const { quality, alwaysOnTop, character, scene, camera } = settings.get()
-    return { quality, alwaysOnTop, character, scene, camera }
+    const { quality, alwaysOnTop, character, scene, camera, desks, assignments } = settings.get()
+    return { quality, alwaysOnTop, character, scene, camera, desks, assignments }
   }
   ipcMain.handle(IpcChannel.SettingsGet, (event) => {
     assertTrustedSender(event)
@@ -47,6 +47,7 @@ export function registerIpcHandlers(
     assertTrustedSender(event)
     const p = SettingsPatch.parse(patch)
     settings.update(p)
+    if (p.desks !== undefined) hub.setSeats(p.desks)
     if (p.alwaysOnTop !== undefined) {
       for (const win of BrowserWindow.getAllWindows()) win.setAlwaysOnTop(p.alwaysOnTop)
     }

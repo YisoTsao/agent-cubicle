@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { QualityLevel } from '../config/render'
 import { isChoice, type CharacterChoice } from '../characters/roster'
 import { DEFAULT_SCENE, isSceneId, type SceneId } from '../config/themes'
+import { isDeskCount, DEFAULT_DESKS, type DeskCount } from '../scene/props/layout'
 import { forcedChoice, useAgents } from './agents'
 
 interface SettingsState {
@@ -26,6 +27,9 @@ interface SettingsState {
   /** Bumped by the "reset view" button. */
   cameraResets: number
   resetCamera(): void
+  /** How many desks the office has (2 = the original room). */
+  desks: DeskCount
+  setDesks(desks: DeskCount): void
   toggleDiagnostics(): void
 }
 
@@ -35,6 +39,8 @@ const urlCamera = params.get('camera')
 const forcedScene: SceneId | null = isSceneId(urlScene) ? urlScene : null
 const forcedCamera: 'iso' | 'free' | null =
   urlCamera === 'iso' || urlCamera === 'free' ? urlCamera : null
+const urlDesks = Number(params.get('desks'))
+const forcedDesks: DeskCount | null = isDeskCount(urlDesks) ? urlDesks : null
 const urlQuality = params.get('quality')
 /** A quality forced via URL (tests/screenshots) wins over the persisted preference. */
 const forcedQuality: QualityLevel | null =
@@ -69,6 +75,11 @@ export const useSettings = create<SettingsState>((set) => ({
     set({ camera })
     void window.cubicle.settings.set({ camera })
   },
+  desks: forcedDesks ?? DEFAULT_DESKS,
+  setDesks: (desks) => {
+    set({ desks })
+    void window.cubicle.settings.set({ desks })
+  },
   cameraResets: 0,
   resetCamera: () => set((s) => ({ cameraResets: s.cameraResets + 1 })),
   toggleDiagnostics: () => set((s) => ({ showDiagnostics: !s.showDiagnostics })),
@@ -84,5 +95,7 @@ export function loadPersistedSettings(): void {
     if (!forcedChoice && isChoice(s.character)) useAgents.getState().setChoice(s.character)
     if (!forcedScene && isSceneId(s.scene)) useSettings.setState({ scene: s.scene })
     if (!forcedCamera) useSettings.setState({ camera: s.camera })
+    if (!forcedDesks && isDeskCount(s.desks)) useSettings.setState({ desks: s.desks })
+    if (!forcedChoice) useAgents.getState().setAssignments(s.assignments ?? {})
   })
 }
