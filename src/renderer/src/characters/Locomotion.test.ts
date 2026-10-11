@@ -46,6 +46,22 @@ describe('Locomotion', () => {
     expect(loco.yaw).toBeCloseTo(placeById(to).yaw, 5)
   })
 
+  it('eases in and out instead of snapping to full speed', () => {
+    const loco = new Locomotion(placeById('desk-a'))
+    loco.goTo(placeById('terminal:0'))
+    const dt = 1 / 60
+    const speeds: number[] = []
+    let last = { x: loco.x, z: loco.z }
+    for (let t = 0; t < 20; t += dt) {
+      loco.update(dt)
+      speeds.push(Math.hypot(loco.x - last.x, loco.z - last.z) / dt)
+      last = { x: loco.x, z: loco.z }
+    }
+    expect(speeds[0]!).toBeLessThan(WALK_SPEED * 0.5)
+    for (let i = 1; i < speeds.length; i++)
+      expect(Math.abs(speeds[i]! - speeds[i - 1]!)).toBeLessThan(0.35)
+  })
+
   it('redirects mid-walk without jumping', () => {
     const loco = new Locomotion(placeById('desk-a'))
     loco.goTo(placeById('lounge:0'))

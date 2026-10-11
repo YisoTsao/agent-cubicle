@@ -5,6 +5,9 @@ import { HUB, PLACES, type Place, type XZ } from './places'
 
 export const WALK_SPEED = 1.5 // m/s — brisk: tool calls are short, walks must be too
 export const TURN_RATE = 7 // rad/s
+/** Speed ramps (m/s²): no snapping from standing to a brisk walk or back. */
+export const ACCEL = 7
+export const DECEL = 9
 /** Frame-time clamp: a long hitch must not turn into a visible jump. */
 export const MAX_DT = 1 / 20
 
@@ -22,6 +25,7 @@ export class Locomotion {
   state: LocoState = 'settled'
   place: Place
   private path: XZ[] = []
+  private speed = 0
 
   constructor(start: Place) {
     this.place = start
@@ -39,6 +43,7 @@ export class Locomotion {
     ;[this.x, this.z] = place.pos
     this.yaw = place.yaw
     this.path = []
+    this.speed = 0
     this.state = 'settled'
   }
 
@@ -56,7 +61,19 @@ export class Locomotion {
   update(rawDt: number): void {
     const dt = Math.min(rawDt, MAX_DT)
     if (this.state === 'walking') {
-      let budget = WALK_SPEED * dt
+      // Pivot before moving off at a corner: speed follows how well the body already faces the
+      // way it is going, and eases down towards the end of the route.
+      const [hx, hz] = this.path[0] ?? [this.x, this.z]
+      const heading = Math.atan2(hx - this.x, hz - this.z)
+      const facing = Math.max(0, Math.cos(wrap(heading - this.yaw)))
+      const remaining = this.remaining()
+      const brake = Math.sqrt(1.2 * DECEL * Math.max(0, remaining)) + 0.1
+      const cap = Math.min(WALK_SPEED * (0.25 + 0.75 * facing * facing), brake)
+      this.speed =
+        this.speed < cap
+          ? Math.min(cap, this.speed + ACCEL * dt)
+          : Math.max(cap, this.speed - DECEL * dt)
+      let budget = this.speed * dt
       while (budget > 0 && this.path.length) {
         const [tx, tz] = this.path[0]!
         const dx = tx - this.x
@@ -74,10 +91,26 @@ export class Locomotion {
           budget = 0
         }
       }
-      if (!this.path.length) this.state = 'turning'
+      if (!this.path.length) {
+        this.speed = 0
+        this.state = 'turning'
+      }
     } else if (this.state === 'turning') {
       if (this.turnTowards(this.place.yaw, dt)) this.state = 'settled'
     }
+  }
+
+  /** Distance still to walk along the route. */
+  private remaining(): number {
+    let d = 0
+    let px = this.x
+    let pz = this.z
+    for (const [x, z] of this.path) {
+      d += Math.hypot(x - px, z - pz)
+      px = x
+      pz = z
+    }
+    return d
   }
 
   /** Rotate towards `target` at most TURN_RATE·dt; returns true when aligned. */
