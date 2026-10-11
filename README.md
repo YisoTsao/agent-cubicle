@@ -244,6 +244,46 @@ App 圖示來自 `build/icon.png`（1024×1024），electron-builder 會自動�
 | 想完全移除                      | 先在設定面板「中斷連接」，再刪除 App 與 `~/.agentcubicle`。                                         |
 | settings.json 格式錯誤          | AgentCubicle 不會覆寫無法解析的檔案；修正後再試。                                                   |
 
+## 專案目錄導覽
+
+```text
+agentCubicle/
+├── packages/shared/src/       共用事件型別、狀態管理與模擬情境
+├── src/
+│   ├── main/                  Electron 主程序、事件來源與本機 HTTP server
+│   │   └── adapters/          Claude Code、Copilot Chat 等來源轉換器
+│   ├── preload/               Main 與 Renderer 之間的安全橋接 API
+│   └── renderer/src/          React 介面與 3D 辦公室
+│       ├── characters/        角色、動畫、狀態呈現與座位
+│       ├── config/            場景、畫質等設定
+│       ├── scene/             Three.js 場景、相機、燈光與家具
+│       ├── store/             Renderer 的 agent 與設定狀態
+│       └── ui/                設定、整合、診斷等介面
+├── assets/                    素材清單與授權資訊
+├── build/                     App 圖示等打包資源
+├── docs/                      規格、進度、整合方式與測試紀錄
+├── tests/                     Playwright 端對端、打包與視覺測試
+├── tools/                     模擬器、預覽、截圖、soak 與驗證工具
+├── package.json               套件資訊與 pnpm 指令
+├── electron.vite.config.mts   Electron Main、Preload、Renderer 建置設定
+├── vitest.config.mts           單元測試設定
+└── playwright*.config.mts      Playwright 測試設定
+```
+
+### 從哪裡開始看
+
+| 想了解 | 建議先看 |
+| ------ | -------- |
+| 事件如何進入與更新狀態 | `src/main/ingest.ts`、`src/main/hubService.ts`、`packages/shared/src/hub.ts` |
+| Claude Code／Copilot 如何接入 | `src/main/adapters/`、`src/main/server.ts`、`docs/INTEGRATIONS.md` |
+| Main 如何安全地呼叫 Renderer | `src/preload/index.ts`、`packages/shared/src/ipc.ts` |
+| 畫面如何把狀態變成角色動作 | `src/renderer/src/store/agents.ts`、`src/renderer/src/characters/fromSession.ts` |
+| 3D 場景與家具怎麼組成 | `src/renderer/src/scene/OfficeScene.tsx`、`src/renderer/src/scene/props/` |
+| 專案設計與目前進度 | `docs/SPEC.md`、`docs/PROGRESS.md` |
+| 自動化測試在哪裡 | `packages/shared/src/*.test.ts`、`src/main/**/*.test.ts`、`tests/` |
+
+`dist/`、`out/`、`test-results/` 是打包、預覽或測試產物，通常由指令自動產生；修改功能時主要編輯 `src/`、`packages/`、`tests/` 與 `tools/`。
+
 ## 開發
 
 ```sh
