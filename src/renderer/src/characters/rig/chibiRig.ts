@@ -17,7 +17,7 @@ import {
 } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { GearFrame } from '../hackerGear'
-import { CHIBI_PROFILE, type RigProfile } from './profile'
+import { CHIBI_PROFILE, CHIBI_SUIT_PROFILE, type RigProfile } from './profile'
 import { BONE_NAMES, createBones, restPosition, type BoneName } from './skeleton'
 
 // Procedural chibi built as ONE SkinnedMesh with rigid per-part skinning and vertex colours:
@@ -30,6 +30,8 @@ export interface ChibiStyle {
   shirt: string
   pants: string
   shoes: string
+  /** Forearms and hands (default: skin). Gloves for the space suit. */
+  glove?: string
 }
 
 export const DEFAULT_STYLE: ChibiStyle = {
@@ -189,8 +191,17 @@ function buildParts(style: ChibiStyle): Part[] {
     const ha = restPosition(`hand_${s}`)
     parts.push(sphere(`upperArm_${s}`, sh, 0.066, style.shirt, undefined, 12))
     parts.push(capsuleBetween(`upperArm_${s}`, sh, el, 0.056, style.shirt))
-    parts.push(capsuleBetween(`forearm_${s}`, el, ha, 0.045, style.skin))
-    parts.push(sphere(`hand_${s}`, [ha[0], ha[1] - 0.025, ha[2]], 0.052, style.skin, undefined, 12))
+    parts.push(capsuleBetween(`forearm_${s}`, el, ha, 0.045, style.glove ?? style.skin))
+    parts.push(
+      sphere(
+        `hand_${s}`,
+        [ha[0], ha[1] - 0.025, ha[2]],
+        0.052,
+        style.glove ?? style.skin,
+        undefined,
+        12,
+      ),
+    )
   }
 
   // Legs
@@ -242,7 +253,7 @@ function bake(part: Part): BufferGeometry {
   return g
 }
 
-export function buildChibiRig(style: ChibiStyle = DEFAULT_STYLE): ChibiRig {
+export function buildChibiRig(style: ChibiStyle = DEFAULT_STYLE, suit = false): ChibiRig {
   const parts = buildParts(style).map(bake)
   const geometry = mergeGeometries(parts, false)
   parts.forEach((p) => p.dispose())
@@ -272,7 +283,7 @@ export function buildChibiRig(style: ChibiStyle = DEFAULT_STYLE): ChibiRig {
     root,
     mesh,
     bones,
-    profile: CHIBI_PROFILE,
+    profile: suit ? CHIBI_SUIT_PROFILE : CHIBI_PROFILE,
     gear: {
       eyeX: 0.075,
       eyeY: 0.19,
@@ -281,6 +292,9 @@ export function buildChibiRig(style: ChibiStyle = DEFAULT_STYLE): ChibiRig {
       headHalfW: 0.225,
       crown: 0.45,
       faceZ: 0.21,
+      helmet: { cy: 0.22, rx: 0.33, ry: 0.33, rz: 0.33 },
+      torso: { chestY: 0.14, packY: 0.13, frontZ: 0.165, backZ: -0.17, halfW: 0.17 },
+      collarR: 0.1,
     },
     dispose() {
       geometry.dispose()

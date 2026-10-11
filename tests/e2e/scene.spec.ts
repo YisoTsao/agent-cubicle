@@ -11,6 +11,30 @@ type Dev = {
 
 const settings = (page: Page) => page.evaluate(() => window.cubicle.settings.get())
 
+test('every scene renders with every character, without errors', async () => {
+  const env = isolatedEnv({ CUBICLE_DIAGNOSTICS: '1', CUBICLE_STATE: 'WRITE' })
+  const app = await electron.launch({ args: [resolve(__dirname, '../..')], env })
+  const page = await app.firstWindow()
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text())
+  })
+  await expect(page.getByTestId('stage')).toHaveAttribute('data-ready', 'true')
+  await page.getByTestId('connect-button').click()
+  for (const scene of ['hacker', 'night', 'space', 'office']) {
+    await page.getByTestId(`scene-${scene}`).click()
+    await expect(page.getByTestId(`scene-${scene}`)).toHaveAttribute('aria-checked', 'true')
+    for (const character of ['chibi', 'duck', 'john']) {
+      await page.getByTestId(`character-${character}`).click()
+      await page.waitForTimeout(250)
+    }
+  }
+  await page.waitForTimeout(500)
+  expect(errors).toEqual([])
+  await app.close()
+})
+
 test('pick the hacker scene and the free camera; both survive a restart', async () => {
   const env = isolatedEnv({ CUBICLE_DIAGNOSTICS: '1', CUBICLE_STATE: 'WRITE' })
   const launch = () => electron.launch({ args: [resolve(__dirname, '../..')], env })

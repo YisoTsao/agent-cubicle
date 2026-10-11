@@ -160,7 +160,7 @@ const BODY_SQUARE = 3.2
 // ---------------------------------------------------------------------------------------------
 // Design description
 
-export type MatKind = 'fur' | 'gloss' | 'plastic'
+export type MatKind = 'fur' | 'gloss' | 'plastic' | 'suit'
 
 export interface PlushDesign {
   id: string
@@ -175,6 +175,8 @@ export interface PlushDesign {
    * `head`, optionally with a cut-out between two ears; the duck's round head is a lathe.
    */
   cushion?: { hole?: Pt[]; thickness: number; rim: number }
+  /** Half-width (px) of the helmet if wider than the head (John's big ears). */
+  helmetHalfW?: number
   /** 0 = flat flocking, 1 = long shaggy strands (Belle). */
   shaggy?: number
   /** Optional different colour for the head (defaults to `fur`). */
@@ -243,15 +245,17 @@ export function plushBones(design: PlushDesign): BoneRest {
   }
 }
 
-export function plushProfile(design: PlushDesign): RigProfile {
+export function plushProfile(design: PlushDesign, suit = false): RigProfile {
+  // A space suit inflates the body by ~1.6 cm: sit that much higher.
+  const lift = suit ? 0.016 : 0
   return {
-    id: `plush-${design.id}`,
+    id: `plush-${design.id}${suit ? '-suit' : ''}`,
     bones: plushBones(design),
     limb: { upperArm: 0.19, forearm: 0.18 },
     restLimb: { upperArm: (372 - 300) * K, forearm: (445 - 372) * K },
     posture: {
-      sit: { hipsY: 0.745, hipsZ: -0.01, lean: 0.06 },
-      sofa: { hipsY: 0.795, hipsZ: 0.09, lean: -0.1 },
+      sit: { hipsY: 0.745 + lift, hipsZ: -0.01 + lift * 1.6, lean: 0.06 },
+      sofa: { hipsY: 0.795 + lift, hipsZ: 0.09 + lift * 1.6, lean: -0.1 },
       stand: { hipsY: Y(457), hipsZ: 0, lean: 0.03 },
     },
     walkSwing: 1.5,
@@ -279,6 +283,8 @@ interface Part {
   fur?: boolean
   /** Already smooth, indexed, with field normals (the body shell). */
   shell?: boolean
+  /** Carries its own vertex colours. */
+  colored?: boolean
   shaggy?: number
 }
 
@@ -602,8 +608,13 @@ export interface PlushRig {
   dispose(): void
 }
 
-export function buildPlushRig(design: PlushDesign): PlushRig {
-  const profile = plushProfile(design)
+export interface PlushOptions {
+  /** Dress the body in a space suit (an inflated, white copy of the body skin). */
+  suit?: boolean
+}
+
+export function buildPlushRig(design: PlushDesign, opts: PlushOptions = {}): PlushRig {
+  const profile = plushProfile(design, opts.suit ?? false)
   const rest = profile.bones
   const parts: Part[] = []
   const shaggy = design.shaggy ?? 0
@@ -630,6 +641,16 @@ export function buildPlushRig(design: PlushDesign): PlushRig {
     fur: true,
     shaggy,
   })
+
+  if (opts.suit) {
+    parts.push({
+      geometry: suitGeometry(design),
+      mat: 'suit',
+      skin: { body: true },
+      color: '#eef1f6',
+      colored: true,
+    })
+  }
 
   // Head: a lathe sphere (duck) or a cushion in the outline of `design.head`.
   if (design.cushion) {
@@ -708,21 +729,21 @@ export function buildPlushRig(design: PlushDesign): PlushRig {
   design.features(ctx)
 
   // Bake: colour, skin, then merge per material.
-  const byMat: Record<MatKind, BufferGeometry[]> = { fur: [], gloss: [], plastic: [] }
+  const byMat: Record<MatKind, BufferGeometry[]> = { fur: [], gloss: [], plastic: [], suit: [] }
   for (const part of parts) {
     let g = part.geometry
     if (part.fur) {
       g = furFinish(g, new Color(part.color), part.shaggy ?? 0, part.shell ?? false)
     } else {
       g.deleteAttribute('uv')
-      flatColor(g, new Color(part.color))
+      if (!part.colored) flatColor(g, new Color(part.color))
     }
     applySkin(g, part)
     byMat[part.mat].push(g)
   }
   const merged: BufferGeometry[] = []
   const kinds: MatKind[] = []
-  for (const kind of ['fur', 'gloss', 'plastic'] as const) {
+  for (const kind of ['fur', 'gloss', 'plastic', 'suit'] as const) {
     const list = byMat[kind]
     if (list.length === 0) continue
     const g = mergeGeometries(list.map(stripToCommon), false)
@@ -749,6 +770,12 @@ export function buildPlushRig(design: PlushDesign): PlushRig {
       vertexColors: true,
       roughness: 0.4,
       metalness: 0,
+    }),
+    suit: new MeshStandardMaterial({
+      name: 'plush-suit',
+      vertexColors: true,
+      roughness: 0.55,
+      metalness: 0.08,
     }),
   }
   const used = kinds.map((k) => materials[k])
@@ -779,6 +806,49 @@ export function buildPlushRig(design: PlushDesign): PlushRig {
   }
 }
 
+/**
+ * The space suit: the body skin pushed out 1.6 cm along its normals, white, with a belt, boots,
+ * gloves and shoulder patches; the accent stripe on the sleeves is the figure's own colour.
+ */
+function suitGeometry(design: PlushDesign): BufferGeometry {
+  const g = shellGeometry(bodyShell(), (x, y, z) => [x * K, (FLOOR_Y - y) * K, z * K])
+  const pos = g.attributes['position']!
+  const nor = g.attributes['normal']!
+  const colors = new Float32Array(pos.count * 3)
+  const accent = new Color(design.fur)
+  const c = new Color()
+  for (let i = 0; i < pos.count; i++) {
+    pos.setXYZ(
+      i,
+      pos.getX(i) + nor.getX(i) * 0.016,
+      pos.getY(i) + nor.getY(i) * 0.016,
+      pos.getZ(i) + nor.getZ(i) * 0.016,
+    )
+    const xp = Math.abs(pos.getX(i)) / K
+    const yp = FLOOR_Y - pos.getY(i) / K
+    const front = pos.getZ(i) > 0
+    if (yp > 586)
+      c.set('#7d8599') // boots
+    else if (yp > 424 && yp < 452 && xp > 150)
+      c.set('#a9b1c3') // gloves
+    else if (yp > 466 && yp < 482)
+      c.set('#7d8599') // belt
+    else if (yp > 350 && yp < 366 && xp > 150)
+      c.copy(accent) // sleeve stripe
+    else if (yp > 290 && yp < 312 && xp > 150)
+      c.set('#ff7a1a') // shoulder patch
+    else if (front && xp < 50 && yp > 316 && yp < 354)
+      c.set('#bcc3d1') // chest panel
+    else c.set('#eef1f6')
+    colors[i * 3] = c.r
+    colors[i * 3 + 1] = c.g
+    colors[i * 3 + 2] = c.b
+  }
+  pos.needsUpdate = true
+  g.setAttribute('color', new Float32BufferAttribute(colors, 3))
+  return g
+}
+
 /** Glasses / headset fit for this head, from its outline table (head-bone local metres). */
 function gearFrame(design: PlushDesign): GearFrame {
   const hwAt = (h: number): number => {
@@ -791,6 +861,8 @@ function gearFrame(design: PlushDesign): GearFrame {
     return 0
   }
   const maxHw = Math.max(...design.head.map(([w]) => w))
+  const topH = Math.max(...design.head.map(([, h]) => h))
+  const hipsBoneY = (FLOOR_Y - 457) * K
   // The crown: highest row that is still nearly full width (ears above it are not covered).
   const crown = Math.max(...design.head.filter(([w]) => w >= maxHw * 0.8).map(([, h]) => h))
   const eyeZ = surfaceZ(design, design.eye.x, design.eye.y)
@@ -802,6 +874,20 @@ function gearFrame(design: PlushDesign): GearFrame {
     headHalfW: hwAt(design.eye.y) * K,
     crown: crown * K,
     faceZ: eyeZ * K + 0.02,
+    helmet: {
+      cy: (topH * K) / 2,
+      rx: (design.helmetHalfW ?? maxHw) * K * 1.12 + 0.03,
+      ry: ((topH * K) / 2) * 1.1 + 0.04,
+      rz: (design.cushion?.thickness ?? maxHw * design.headDepth) * K * 1.12 + 0.04,
+    },
+    torso: {
+      chestY: (FLOOR_Y - 340) * K - (hipsBoneY + 0.06),
+      packY: (FLOOR_Y - 330) * K - (hipsBoneY + 0.06),
+      frontZ: 0.19,
+      backZ: -0.19,
+      halfW: 0.25,
+    },
+    collarR: 0.2,
   }
 }
 

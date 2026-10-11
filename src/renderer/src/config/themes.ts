@@ -7,7 +7,7 @@ import { BACKGROUND, LIGHTING, PALETTE } from './render'
 
 export type Palette = { [K in keyof typeof PALETTE]: string }
 
-export type SceneId = 'office' | 'hacker'
+export type SceneId = 'office' | 'hacker' | 'night' | 'space'
 
 export interface Lighting {
   sun: { position: [number, number, number]; intensity: number; color: string }
@@ -35,6 +35,12 @@ export interface SceneTheme {
   bookColors: string[]
   /** Vignette strength. */
   vignette: number
+  /** Which furniture set is drawn (same footprints, different look). */
+  furniture: 'office' | 'space'
+  /** What surrounds the floating room. */
+  sky: 'none' | 'night' | 'space'
+  /** Per-material tweaks that are not colours (glow strength). */
+  tweaks?: Record<string, { emissiveIntensity?: number }>
 }
 
 const office: SceneTheme = {
@@ -65,6 +71,8 @@ const office: SceneTheme = {
     PALETTE.woodDark,
   ],
   vignette: 0.35,
+  furniture: 'office',
+  sky: 'none',
 }
 
 const hacker: SceneTheme = {
@@ -119,9 +127,112 @@ const hacker: SceneTheme = {
   floor: 'grid',
   bookColors: ['#19e3ff', '#ff2bd6', '#39ff14', '#2c64ff', '#8a5cff', '#c9d3ff', '#1b2340'],
   vignette: 0.6,
+  furniture: 'office',
+  sky: 'none',
 }
 
-export const THEMES: Record<SceneId, SceneTheme> = { office, hacker }
+const night: SceneTheme = {
+  id: 'night',
+  name: '夜晚小屋',
+  note: '同樣的擺設，夜裡的暖燈與月光',
+  palette: {
+    ...PALETTE,
+    wallCream: '#3d3558',
+    wallTrim: '#4d4370',
+    floorWood: '#5b3e3c',
+    floorWoodDark: '#432a2e',
+    woodLight: '#8c5c48',
+    woodMid: '#6b4337',
+    woodDark: '#4a2c2a',
+    sage: '#40595a',
+    sageDark: '#2f4647',
+    sageLight: '#547372',
+    terracotta: '#a8554f',
+    mustard: '#f4b84a',
+    dustyBlue: '#4f6aa8',
+    blush: '#7e4a6c',
+    charcoal: '#1d1b28',
+    offWhite: '#eadccb',
+    metal: '#8b90aa',
+    screenGlow: '#8fd0ff',
+    windowLight: '#3d4fd0',
+    sunPatch: '#5b79ff',
+    lampShade: '#ffd9a0',
+    ledGreen: '#7dffa8',
+  },
+  background: '#0a0d22',
+  lighting: {
+    sun: { position: [-6, 10, 5], intensity: 0.7, color: '#93abff' },
+    hemisphere: { sky: '#2c3170', ground: '#170f1f', intensity: 0.8 },
+    environmentIntensity: 0.3,
+    accents: [
+      { color: '#ffb45a', position: [-1.3, 1.15, -2.0], intensity: 2.2, distance: 3.2 },
+      { color: '#ffb45a', position: [1.5, 1.05, 0.1], intensity: 1.8, distance: 3.2 },
+      { color: '#ff9a3c', position: [-0.55, 0.65, 1.3], intensity: 1.2, distance: 2.2 },
+    ],
+  },
+  bloom: { intensity: 0.85, threshold: 0.72 },
+  floor: 'plank',
+  bookColors: ['#c46a5a', '#e8b04a', '#6c8ac4', '#6fa08a', '#eadccb', '#b07a9a', '#4a2c2a'],
+  vignette: 0.5,
+  furniture: 'office',
+  sky: 'night',
+  tweaks: { lampShade: { emissiveIntensity: 1.5 }, lampGlow: { emissiveIntensity: 4 } },
+}
+
+const space: SceneTheme = {
+  id: 'space',
+  name: '太空站',
+  note: '金屬艙壁、舷窗外的地球，人物穿太空服',
+  palette: {
+    ...PALETTE,
+    wallCream: '#cfd6e2',
+    wallTrim: '#8e98ab',
+    floorWood: '#3a4152',
+    floorWoodDark: '#262b38',
+    woodLight: '#dfe4ec',
+    woodMid: '#aab3c2',
+    woodDark: '#5a6376',
+    sage: '#2a3342',
+    sageDark: '#1f2733',
+    sageLight: '#3a4558',
+    terracotta: '#ff7a1a',
+    mustard: '#ffd21a',
+    dustyBlue: '#3b82f6',
+    blush: '#2a3342',
+    charcoal: '#161a24',
+    offWhite: '#eef2f8',
+    metal: '#a7b0c0',
+    screenGlow: '#4de3ff',
+    windowLight: '#3a7bff',
+    sunPatch: '#9fc4ff',
+    terminalGreen: '#43ff8a',
+    terminalBg: '#04141f',
+    ledGreen: '#43ff8a',
+    ledAmber: '#ff9a1a',
+    rackPanel: '#2a3342',
+    lampShade: '#dfe8ff',
+  },
+  background: '#02030a',
+  lighting: {
+    sun: { position: [-6, 10, 5], intensity: 2.4, color: '#eaf1ff' },
+    hemisphere: { sky: '#9db4ff', ground: '#1b1f2e', intensity: 0.55 },
+    environmentIntensity: 0.5,
+    accents: [
+      { color: '#4de3ff', position: [-1.5, 1.7, -1.4], intensity: 1.2, distance: 4.5 },
+      { color: '#ff7a1a', position: [-1.9, 1.4, 1.0], intensity: 0.5, distance: 3.2 },
+      { color: '#43ff8a', position: [1.2, 1.5, -1.8], intensity: 1.1, distance: 4 },
+    ],
+  },
+  bloom: { intensity: 0.7, threshold: 0.8 },
+  floor: 'grid',
+  bookColors: ['#ff7a1a', '#4de3ff', '#eef2f8', '#ffd21a', '#43ff8a', '#aab3c2', '#3b82f6'],
+  vignette: 0.4,
+  furniture: 'space',
+  sky: 'space',
+}
+
+export const THEMES: Record<SceneId, SceneTheme> = { office, hacker, night, space }
 export const SCENE_IDS = Object.keys(THEMES) as SceneId[]
 export const DEFAULT_SCENE: SceneId = 'office'
 

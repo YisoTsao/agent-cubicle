@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { Locomotion, placeById } from '../characters/Locomotion'
 import { PLACES } from '../characters/places'
-import { COLLIDERS } from './colliders'
+import { collidersFor } from './colliders'
 
 // Walking from any place to any other must keep the body clear of furniture. The last stretch
 // into a seat (and the first one out of it) is exempt: that is where the character is meant to
 // touch the furniture.
 
 /** Half-width of the widest figure (plush: shoulders / arm bulges). */
-const BODY_RADIUS: Record<string, number> = { chibi: 0.27, plush: 0.4 }
+const BODY_RADIUS: Record<string, number> = { chibi: 0.27, plush: 0.4, 'plush in a suit': 0.43 }
 
 /** Distance from a point to the segment a→b. */
 function segDist(x: number, z: number, a: readonly [number, number], b: readonly [number, number]) {
@@ -18,9 +18,14 @@ function segDist(x: number, z: number, a: readonly [number, number], b: readonly
   return Math.hypot(x - (a[0] + t * dx), z - (a[1] + t * dz))
 }
 
-function clearance(x: number, z: number, radius: number): { name: string; depth: number } | null {
+function clearance(
+  x: number,
+  z: number,
+  radius: number,
+  colliders = collidersFor('office'),
+): { name: string; depth: number } | null {
   let worst: { name: string; depth: number } | null = null
-  for (const c of COLLIDERS) {
+  for (const c of colliders) {
     // Only things that block a walking body (knee to shoulder height).
     if (c.max[1] < 0.15 || c.min[1] > 1.1) continue
     const dx = Math.max(c.min[0] - x, 0, x - c.max[0])
@@ -48,7 +53,12 @@ describe.each(Object.entries(BODY_RADIUS))('%s walking routes', (_kind, radius) 
           const lastWp = (p: typeof a) => (p.route ?? [p.approach]).at(-1)!
           const onSeatStretch = (p: typeof a) => segDist(loco.x, loco.z, lastWp(p), p.pos) < 0.05
           if (onSeatStretch(a) || onSeatStretch(b)) continue
-          const hit = clearance(loco.x, loco.z, radius)
+          const hit = clearance(
+            loco.x,
+            loco.z,
+            radius,
+            collidersFor(_kind.includes('suit') ? 'space' : 'office'),
+          )
           if (hit) {
             const key = `${from} → ${to}: ${hit.name}`
             problems.set(key, Math.max(problems.get(key) ?? 0, hit.depth))

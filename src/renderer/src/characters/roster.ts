@@ -71,10 +71,10 @@ export function characterFor(choice: CharacterChoice, agentId: string, deskId = 
   return CHARACTERS[h % CHARACTERS.length]!.id
 }
 
-export function buildRig(id: CharacterId, style: ChibiStyle): CharacterRig {
+export function buildRig(id: CharacterId, style: ChibiStyle, suit = false): CharacterRig {
   const def = BY_ID.get(id)
-  if (def?.kind === 'plush' && def.design) return buildPlushRig(def.design)
-  return buildChibiRig(style)
+  if (def?.kind === 'plush' && def.design) return buildPlushRig(def.design, { suit })
+  return buildChibiRig(style, suit)
 }
 
 const profiles = new Map<string, RigProfile>()

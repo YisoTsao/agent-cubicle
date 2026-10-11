@@ -14,7 +14,7 @@ import {
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { materials } from '../scene/materials'
 import { useSettings } from '../store/settings'
-import { createHackerGear, hackerOutfit } from './hackerGear'
+import { createSceneGear, isSuited, outfitFor } from './gear'
 import type { AgentView } from '../store/agents'
 import { AnimationController } from './AnimationController'
 import { agentDebug } from './debug'
@@ -63,19 +63,19 @@ export function AgentCharacter({ agent }: { agent: AgentView }) {
   const tagRef = useRef<Group>(null)
 
   const rig = useMemo(
-    () => buildRig(agent.character, scene === 'hacker' ? hackerOutfit(agent.style) : agent.style),
+    () => buildRig(agent.character, outfitFor(scene, agent.style), isSuited(scene)),
     [agent.character, agent.style, scene],
   )
-  // Hacker scene: neon glasses + headset on the head bone.
-  const gear = useMemo(() => (scene === 'hacker' ? createHackerGear(rig.gear) : null), [rig, scene])
+  // Per-scene gear: neon glasses + headset (hacker), helmet + life-support pack (space).
+  const gear = useMemo(() => createSceneGear(scene, rig), [rig, scene])
   useEffect(() => {
     if (!gear) return
-    rig.bones.head.add(gear.group)
+    gear.attach()
     return () => {
-      rig.bones.head.remove(gear.group)
+      gear.detach()
       gear.dispose()
     }
-  }, [gear, rig])
+  }, [gear])
   const controller = useMemo(
     () => new AnimationController(rig.root, clipsForRig(rig), CHIBI_MANIFEST, RESOLVED),
     [rig],

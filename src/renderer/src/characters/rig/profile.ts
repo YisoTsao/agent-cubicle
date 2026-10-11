@@ -47,3 +47,17 @@ export const CHIBI_PROFILE: RigProfile = {
   overlayHeight: 0.78,
   overlaySize: 0.34,
 }
+
+/**
+ * The chibi in a space suit: the life-support pack sticks out behind, so it sits (and leans on
+ * the sofa) a little further forward than the office worker.
+ */
+export const CHIBI_SUIT_PROFILE: RigProfile = {
+  ...CHIBI_PROFILE,
+  id: 'chibi-suit',
+  posture: {
+    ...CHIBI_PROFILE.posture,
+    sit: { ...CHIBI_PROFILE.posture.sit, hipsZ: CHIBI_PROFILE.posture.sit.hipsZ + 0.115 },
+    sofa: { ...CHIBI_PROFILE.posture.sofa, hipsZ: CHIBI_PROFILE.posture.sofa.hipsZ + 0.05 },
+  },
+}

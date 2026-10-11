@@ -266,32 +266,34 @@ function CoffeeMachine() {
 const CONSOLE = {
   h: 0.82, // chibi-height standing console
   z: WALL_Z + 0.3,
+  /** One monitor in front of each standing slot (slot gap / 2 either side of the centre). */
   monitors: [
-    { x: -0.26, yaw: 0.18 },
-    { x: 0.26, yaw: -0.18 },
+    { x: -TERMINAL.slotGap / 2, yaw: 0.18 },
+    { x: TERMINAL.slotGap / 2, yaw: -0.18 },
   ],
 }
 
 function TerminalConsole() {
-  const [sx] = TERMINAL.stand
+  const sx = TERMINAL.center
   const { h } = CONSOLE
+  const legX = TERMINAL.legInset
   return (
     <group position={[sx, 0, CONSOLE.z]}>
       <Block
-        size={[1.1, 0.05, 0.5]}
+        size={[TERMINAL.width, 0.05, 0.5]}
         position={[0, h, 0]}
         material={materials.woodDark}
         radius={0.015}
       />
       <Block
-        size={[0.05, h, 0.42]}
-        position={[-0.5, h / 2, 0]}
+        size={[0.05, h, 0.3]}
+        position={[-legX, h / 2, -0.06]}
         material={materials.charcoal}
         radius={0.015}
       />
       <Block
-        size={[0.05, h, 0.42]}
-        position={[0.5, h / 2, 0]}
+        size={[0.05, h, 0.3]}
+        position={[legX, h / 2, -0.06]}
         material={materials.charcoal}
         radius={0.015}
       />
@@ -312,12 +314,15 @@ function TerminalConsole() {
           />
         </group>
       ))}
-      <Block
-        size={[0.4, 0.016, 0.13]}
-        position={[0, h + 0.033, 0.14]}
-        material={materials.charcoal}
-        radius={0.006}
-      />
+      {CONSOLE.monitors.map(({ x }) => (
+        <Block
+          key={`kb${x}`}
+          size={[0.4, 0.016, 0.13]}
+          position={[x, h + 0.033, 0.14]}
+          material={materials.charcoal}
+          radius={0.006}
+        />
+      ))}
     </group>
   )
 }
@@ -327,7 +332,7 @@ function TerminalConsole() {
  * otherwise they sit dim.
  */
 export function TerminalScreens({ active }: { active: boolean }) {
-  const [sx] = TERMINAL.stand
+  const sx = TERMINAL.center
   return (
     <group position={[sx, 0, CONSOLE.z]}>
       {CONSOLE.monitors.map(({ x, yaw }, i) => (
@@ -379,7 +384,7 @@ function TerminalLines({ active, seed }: { active: boolean; seed: number }) {
 function ServerRack() {
   const h = 1.9
   return (
-    <group position={[2.15, 0, WALL_Z + 0.38]}>
+    <group position={[2.2, 0, WALL_Z + 0.38]}>
       <Block
         size={[0.66, h, 0.7]}
         position={[0, h / 2, 0]}

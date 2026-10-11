@@ -67,12 +67,47 @@ export const COLLIDERS: Collider[] = [
   box('pouf', 0.05, 0.18, 2.2, 0.6, 0.36, 0.6, true),
   // Back wall: coffee bar, terminal console, server rack, bookshelf.
   box('coffee-bar', COFFEE_BAR.stand[0], 0.4, -ROOM.half + 0.22, 1.2, 0.8, 0.42),
-  box('console:top', TERMINAL.stand[0], 0.82, -ROOM.half + 0.3, 1.1, 0.05, 0.5, true),
-  box('console:leg-l', TERMINAL.stand[0] - 0.5, 0.41, -ROOM.half + 0.3, 0.05, 0.82, 0.42),
-  box('console:leg-r', TERMINAL.stand[0] + 0.5, 0.41, -ROOM.half + 0.3, 0.05, 0.82, 0.42),
-  box('rack', 2.15, 0.95, -ROOM.half + 0.38, 0.66, 1.9, 0.7),
+  box('console:top', TERMINAL.center, 0.82, -ROOM.half + 0.3, TERMINAL.width, 0.05, 0.5, true),
+  // Legs sit at the ends of the console, shallow and against the wall; arms may brush them.
+  box(
+    'console:leg-l',
+    TERMINAL.center - TERMINAL.legInset,
+    0.41,
+    -ROOM.half + 0.24,
+    0.05,
+    0.82,
+    0.3,
+    true,
+  ),
+  box(
+    'console:leg-r',
+    TERMINAL.center + TERMINAL.legInset,
+    0.41,
+    -ROOM.half + 0.24,
+    0.05,
+    0.82,
+    0.3,
+    true,
+  ),
+  box('rack', 2.2, 0.95, -ROOM.half + 0.38, 0.66, 1.9, 0.7),
   box('bookshelf', -2.0, 0.925, -ROOM.half + 0.19, 1.0, 1.85, 0.36),
   // Room walls (inner faces), as thick slabs.
   box('wall-left', -ROOM.half - 0.5, 1.4, 0, 1.0, 2.8, ROOM.half * 2 + 1),
   box('wall-back', 0, 1.4, -ROOM.half - 0.5, ROOM.half * 2 + 1, 2.8, 1.0),
 ]
+
+/**
+ * The station's crew seats and bench have lower backrests (so a life-support pack clears them); every
+ * other solid piece keeps the office footprint.
+ */
+export function collidersFor(furniture: 'office' | 'space'): Collider[] {
+  if (furniture === 'office') return COLLIDERS
+  return COLLIDERS.map((c) => {
+    const cx = (c.min[0] + c.max[0]) / 2
+    const cz = (c.min[2] + c.max[2]) / 2
+    if (c.name.endsWith(':chair-back')) return box(c.name, cx, 0.62, cz, 0.08, 0.28, 0.44, true)
+    if (c.name === 'sofa:back')
+      return box(c.name, cx, 0.53, cz, 0.24, 0.4, c.max[2] - c.min[2], true)
+    return c
+  })
+}

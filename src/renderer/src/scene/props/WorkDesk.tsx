@@ -22,7 +22,7 @@ export interface WorkstationSpec {
 
 /** Seats available to agents (SPEC §7 SeatAllocator consumes this list in Phase 4). */
 export const WORKSTATIONS: readonly WorkstationSpec[] = [
-  { id: 'desk-a', center: [-1.5, -1.58], decor: 'full' },
+  { id: 'desk-a', center: [-1.4, -1.58], decor: 'full' },
   { id: 'desk-b', center: [1.3, 0.7], decor: 'minimal' },
 ]
 

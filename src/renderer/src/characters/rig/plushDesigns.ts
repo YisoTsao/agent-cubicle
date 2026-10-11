@@ -285,6 +285,7 @@ export const JOHN: PlushDesign = {
     [0, 179],
   ]),
   cushion: { thickness: 92, rim: 80 },
+  helmetHalfW: 215,
   headDepth: 0.88,
   eye: { x: 34, y: 103 },
   features(ctx) {

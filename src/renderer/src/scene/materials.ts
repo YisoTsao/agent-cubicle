@@ -18,6 +18,8 @@ type Key = keyof typeof PALETTE
 const cache = new Map<string, MeshStandardMaterial>()
 /** Which palette keys each shared material is made from (so a theme change can recolour it). */
 const recipes = new Map<string, { color: Key; emissive?: Key }>()
+/** Default glow strength of each emissive material. */
+const baseEmissive = new Map<string, number>()
 
 /** The active palette; materials created later start from it. */
 let current: Palette = PALETTE
@@ -41,6 +43,7 @@ function make(
   }
   cache.set(name, mat)
   recipes.set(name, { color, ...(opts.emissive ? { emissive: opts.emissive } : {}) })
+  if (opts.emissive) baseEmissive.set(name, opts.emissiveIntensity ?? 1)
   return mat
 }
 
@@ -168,6 +171,11 @@ export function applyMaterialTheme(id: SceneId): void {
     floorMat.needsUpdate = true
   }
   sunPatchMat?.color.set(current.sunPatch)
+  // Non-colour tweaks (glow strength) on top of each material's defaults.
+  for (const [name, mat] of cache) {
+    const base = baseEmissive.get(name)
+    if (base !== undefined) mat.emissiveIntensity = theme.tweaks?.[name]?.emissiveIntensity ?? base
+  }
 }
 
 export const materials = {

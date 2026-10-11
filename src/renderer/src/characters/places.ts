@@ -35,9 +35,9 @@ const FACE_CAMERA = Math.PI / 4
 const DESK_ROUTES: Record<string, Pick<Place, 'route'>> = {
   'desk-a': {
     route: [
-      [-1.5, -0.35],
-      [-2.3, -0.4],
-      [-2.3, -1.0],
+      [-1.5, -0.37],
+      [-2.26, -0.37],
+      [-2.26, -0.8],
     ],
   },
   'desk-b': {
@@ -78,9 +78,9 @@ const ALL: Place[] = [
   {
     id: 'terminal:1',
     group: 'terminal',
-    pos: [tx + 0.42, tz],
+    pos: [tx + TERMINAL.slotGap, tz],
     yaw: FACE_MINUS_Z,
-    approach: [tx + 0.42, tz + 0.5],
+    approach: [tx + TERMINAL.slotGap, tz + 0.5],
     posture: 'stand',
   },
   // Sofa: left cushion, then right cushion.

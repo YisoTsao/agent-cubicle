@@ -28,6 +28,12 @@ export interface GearFrame {
   crown: number
   /** z of the front of the face, for the microphone tip. */
   faceZ: number
+  /** Head size for the helmet: centre height above the head bone and ellipsoid radii. */
+  helmet: { cy: number; rx: number; ry: number; rz: number }
+  /** Torso in spine-bone local metres: chest height, pack height, front / back surface z, half width. */
+  torso: { chestY: number; packY: number; frontZ: number; backZ: number; halfW: number }
+  /** Neck: collar ring radius (at the head bone). */
+  collarR: number
 }
 
 export interface HackerGear {

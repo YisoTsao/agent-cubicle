@@ -5,6 +5,10 @@ import { PRESENTATION } from '../characters/presentation'
 import { useAgents } from '../store/agents'
 import { useSettings } from '../store/settings'
 import { HackerDecor } from './props/HackerDecor'
+import { NightDecor } from './props/NightDecor'
+import { SpaceFurniture } from './props/SpaceFurniture'
+import { THEMES } from '../config/themes'
+import { Sky } from './Sky'
 import { applyMaterialTheme } from './materials'
 import { BackWall, TerminalScreens } from './props/BackWall'
 import { Lounge } from './props/Lounge'
@@ -13,9 +17,15 @@ import { DeskScreen, WORKSTATIONS, WorkDesk } from './props/WorkDesk'
 import { StaticBatch } from './StaticBatch'
 
 /** Static furniture: memoized so agent updates never re-render (and re-allocate) the batched tree. */
-const StaticFurniture = memo(function StaticFurniture() {
+const StaticFurniture = memo(function StaticFurniture({ station }: { station: boolean }) {
+  if (station)
+    return (
+      <StaticBatch key="space">
+        <SpaceFurniture />
+      </StaticBatch>
+    )
   return (
-    <StaticBatch>
+    <StaticBatch key="office">
       <Room />
       {WORKSTATIONS.map((ws) => (
         <WorkDesk key={ws.id} spec={ws} />
@@ -35,8 +45,10 @@ export function OfficeScene() {
 
   return (
     <group>
-      <StaticFurniture />
+      <Sky />
+      <StaticFurniture station={THEMES[scene].furniture === 'space'} />
       {scene === 'hacker' && <HackerDecor />}
+      {scene === 'night' && <NightDecor />}
 
       {/* Live props driven by agent state */}
       {WORKSTATIONS.map((ws) => {

@@ -6,7 +6,8 @@ import { AnimationController } from '../characters/AnimationController'
 import { CHIBI_MANIFEST, resolveClips, type ClipRole } from '../characters/manifest'
 import { buildRig, clipsForRig, isCharacterId } from '../characters/roster'
 import { DEFAULT_STYLE } from '../characters/rig/chibiRig'
-import { createHackerGear, hackerOutfit } from '../characters/hackerGear'
+import { createSceneGear, isSuited, outfitFor } from '../characters/gear'
+import { isSceneId } from '../config/themes'
 import { ACESFilmicToneMapping, NoToneMapping, SRGBColorSpace } from 'three'
 import { Lighting } from '../scene/Lighting'
 
@@ -92,24 +93,21 @@ export function CharacterPreview({ spec }: { spec: string }) {
 }
 
 function Figure({ id, opts }: { id: string; opts: Record<string, string> }) {
-  const hacker = opts['scene'] === 'hacker'
+  const scene = isSceneId(opts['scene']) ? opts['scene'] : 'office'
   const rig = useMemo(
     () =>
-      buildRig(
-        isCharacterId(id) ? id : 'chibi',
-        hacker ? hackerOutfit(DEFAULT_STYLE) : DEFAULT_STYLE,
-      ),
-    [id, hacker],
+      buildRig(isCharacterId(id) ? id : 'chibi', outfitFor(scene, DEFAULT_STYLE), isSuited(scene)),
+    [id, scene],
   )
   useEffect(() => {
-    if (!hacker) return
-    const gear = createHackerGear(rig.gear)
-    rig.bones.head.add(gear.group)
+    const gear = createSceneGear(scene, rig)
+    if (!gear) return
+    gear.attach()
     return () => {
-      rig.bones.head.remove(gear.group)
+      gear.detach()
       gear.dispose()
     }
-  }, [rig, hacker])
+  }, [rig, scene])
   const controller = useMemo(
     () =>
       new AnimationController(
