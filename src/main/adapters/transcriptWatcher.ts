@@ -13,9 +13,15 @@ import { basename, join, sep } from 'node:path'
 
 export interface TranscriptWatcherOptions {
   root: string
+  /** How many directory levels below `root` hold transcripts (Claude: 1; VS Code chats: 2). */
+  depth?: number
+  /** Which files to tail (default: every `.jsonl`). */
+  accept?(path: string): boolean
   onLine(line: string, file: string): void
   /** A transcript modified within `recentMs` before startup (an already running session). */
   onRecentSession?(sessionId: string, lastLine: string | null): void
+  /** Same moment, but gets the file path (for adapters that need more than the session id). */
+  onRecentFile?(file: string): void
   recentMs?: number
 }
 
@@ -39,12 +45,20 @@ export class TranscriptWatcher {
 
   constructor(private readonly opts: TranscriptWatcherOptions) {}
 
+  private get depth(): number {
+    return this.opts.depth ?? 1
+  }
+
+  private accepts(path: string): boolean {
+    return this.opts.accept ? this.opts.accept(path) : path.endsWith('.jsonl')
+  }
+
   start(): Promise<void> {
     return new Promise((resolve) => {
       const w = watch(this.opts.root, {
-        depth: 1, // root/<project>/<session>.jsonl — skip subagents/ transcripts
+        depth: this.depth, // Claude: root/<project>/<session>.jsonl — skips subagents/
         ignoreInitial: false,
-        ignored: (path, stats) => !!stats?.isFile() && !path.endsWith('.jsonl'),
+        ignored: (path, stats) => !!stats?.isFile() && !this.accepts(path),
       })
       w.on('add', (path) => {
         const p = this.onAdd(path)
@@ -77,7 +91,7 @@ export class TranscriptWatcher {
   }
 
   private async onAdd(path: string): Promise<void> {
-    if (!path.endsWith('.jsonl') || this.files.has(path)) return
+    if (!this.accepts(path) || this.files.has(path)) return
     if (!this.ready) {
       // Existing file at startup: start at the end.
       try {
@@ -85,8 +99,10 @@ export class TranscriptWatcher {
         this.files.set(path, { offset: s.size, partial: '', queue: Promise.resolve() })
         this.stats.files = this.files.size
         const recentMs = this.opts.recentMs ?? 2 * 60_000
-        if (this.opts.onRecentSession && Date.now() - s.mtimeMs < recentMs) {
-          this.opts.onRecentSession(basename(path, '.jsonl'), await lastLine(path, s.size))
+        if (Date.now() - s.mtimeMs < recentMs) {
+          this.opts.onRecentFile?.(path)
+          if (this.opts.onRecentSession)
+            this.opts.onRecentSession(basename(path, '.jsonl'), await lastLine(path, s.size))
         }
       } catch (err) {
         this.stats.errors++
@@ -102,16 +118,11 @@ export class TranscriptWatcher {
   /** Safety net: pick up new files and missed appends even if no fs event arrived. */
   private async pollSizes(): Promise<void> {
     try {
-      for (const project of await readdir(this.opts.root, { withFileTypes: true })) {
-        if (!project.isDirectory()) continue
-        const dir = join(this.opts.root, project.name)
-        for (const name of await readdir(dir).catch(() => [] as string[])) {
-          const path = join(dir, name)
-          if (name.endsWith('.jsonl') && !this.files.has(path)) void this.onAdd(path)
-        }
+      for (const path of await this.listFiles(this.opts.root, this.depth)) {
+        if (this.accepts(path) && !this.files.has(path)) void this.onAdd(path)
       }
     } catch {
-      // root missing (Claude Code not installed yet): nothing to do
+      // root missing (the tool is not installed yet): nothing to do
     }
     for (const [path, f] of this.files) {
       try {
@@ -121,6 +132,18 @@ export class TranscriptWatcher {
         // deleted between polls: chokidar's unlink will clean up
       }
     }
+  }
+
+  /** Files `levels` directory levels below `dir` (levels = 0: files directly inside). */
+  private async listFiles(dir: string, levels: number): Promise<string[]> {
+    const out: string[] = []
+    for (const entry of await readdir(dir, { withFileTypes: true }).catch(() => [])) {
+      const path = join(dir, entry.name)
+      if (entry.isDirectory()) {
+        if (levels > 0) out.push(...(await this.listFiles(path, levels - 1)))
+      } else if (levels === 0) out.push(path)
+    }
+    return out
   }
 
   /** Serialize reads per file so appends are processed in order. */

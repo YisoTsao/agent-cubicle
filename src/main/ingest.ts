@@ -1,17 +1,22 @@
 import type { AgentEvent } from '@shared/events'
 import type { EventHub, IngestOutcome } from '@shared/hub'
 import { mapClaudeHook } from './adapters/claudeHooks'
+import { readFileSync } from 'node:fs'
+import { basename, dirname, join } from 'node:path'
 import { mapTranscriptLine } from './adapters/claudeTranscript'
+import { COPILOT_AGENT_ID, CopilotChatMapper, copilotAgentName } from './adapters/copilotChat'
 
 // Routes every source into the hub (SPEC §3/§5) and arbitrates between them:
 // once a Claude session has spoken through hooks (precise, ordered), transcript-derived events
 // for that session are dropped so the two sources never fight.
 
 const HOOK_SESSION_MEMORY = 500
+const COPILOT_FILE_MEMORY = 200
 
 export class IngestRouter {
   private readonly hookSeq = new Map<string, number>()
-  readonly stats = { hook: 0, hookIgnored: 0, log: 0, logSuperseded: 0, webhook: 0 }
+  private readonly copilot = new Map<string, CopilotChatMapper>()
+  readonly stats = { hook: 0, hookIgnored: 0, log: 0, logSuperseded: 0, webhook: 0, copilot: 0 }
 
   constructor(private readonly hub: EventHub) {}
 
@@ -55,6 +60,39 @@ export class IngestRouter {
     })
   }
 
+  /** One new line of a VS Code Copilot Chat session file (see adapters/copilotChat.ts). */
+  fromCopilotLine(line: string, file: string): void {
+    for (const event of this.copilotMapper(file).mapLine(line)) {
+      this.stats.copilot++
+      this.hub.ingest(event)
+    }
+  }
+
+  /** A Copilot chat that was active right before startup: show it without replaying history. */
+  fromRecentCopilot(file: string): void {
+    const m = this.copilotMapper(file)
+    this.hub.ingest({
+      eventId: `cp:${m.sessionId}:recent`,
+      agentId: COPILOT_AGENT_ID,
+      agentName: m.agentName,
+      sessionId: m.sessionId,
+      type: 'SESSION_STARTED',
+      timestamp: Date.now(),
+      source: 'log',
+    })
+  }
+
+  private copilotMapper(file: string): CopilotChatMapper {
+    let m = this.copilot.get(file)
+    if (!m) {
+      m = new CopilotChatMapper(basename(file, '.jsonl'), copilotAgentName(workspaceFolder(file)))
+      this.copilot.set(file, m)
+      if (this.copilot.size > COPILOT_FILE_MEMORY)
+        this.copilot.delete(this.copilot.keys().next().value!)
+    }
+    return m
+  }
+
   private fromLogEvent(event: AgentEvent): void {
     if (this.hookSeq.has(event.sessionId)) {
       this.stats.logSuperseded++
@@ -71,5 +109,18 @@ export class IngestRouter {
     if (this.hookSeq.size > HOOK_SESSION_MEMORY)
       this.hookSeq.delete(this.hookSeq.keys().next().value!)
     return next
+  }
+}
+
+/** The folder a VS Code workspace storage entry belongs to (from its workspace.json). */
+function workspaceFolder(chatFile: string): string | undefined {
+  try {
+    const meta = JSON.parse(
+      readFileSync(join(dirname(dirname(chatFile)), 'workspace.json'), 'utf8'),
+    ) as { folder?: unknown; workspace?: unknown }
+    const target = meta.folder ?? meta.workspace
+    return typeof target === 'string' ? target.replace(/\.code-workspace$/, '') : undefined
+  } catch {
+    return undefined
   }
 }

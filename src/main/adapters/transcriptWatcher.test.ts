@@ -85,4 +85,24 @@ describe('TranscriptWatcher', () => {
     await new Promise((r) => setTimeout(r, 200))
     expect(t.lines).toEqual(['{"main":1}'])
   })
+
+  it('watches nested files that match a filter (VS Code chatSessions)', async () => {
+    const t = setup()
+    const chats = join(t.root, 'abc123', 'chatSessions')
+    mkdirSync(chats, { recursive: true })
+    const other = join(t.root, 'abc123', 'GitHub.copilot-chat')
+    mkdirSync(other)
+    watcher = new TranscriptWatcher({
+      root: t.root,
+      depth: 2,
+      accept: (p) => /chatSessions[\\/][^\\/]+\.jsonl$/.test(p),
+      onLine: (l, f) => t.lines.push(`${f.endsWith('c1.jsonl') ? 'c1' : 'other'}:${l}`),
+    })
+    await watcher.start()
+    writeFileSync(join(chats, 'c1.jsonl'), '{"kind":0}\n')
+    writeFileSync(join(other, 'x.jsonl'), '{"no":1}\n')
+    await waitFor(() => t.lines.length === 1)
+    await new Promise((r) => setTimeout(r, 300))
+    expect(t.lines).toEqual(['c1:{"kind":0}'])
+  })
 })

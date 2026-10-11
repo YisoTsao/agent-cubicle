@@ -302,3 +302,11 @@
 - **走路**：`Locomotion` 加入加減速，轉角時依身體朝向放慢（原本轉角會滑步）。
 - **測試**：unit 與 e2e 見提交紀錄；新增 `seats.spec.ts`（桌數、每座位角色、點擊換角色）、桌 C–F 的防穿模與走路檢查、`hub.setSeats` 與座位指定的單元測試。`crowd` 情境（8 個 agent）供預覽使用，`tools/preview/sky.ts office:6` 可截圖。
 - **限制**：桌 C–F 沒有桌面裝飾（只有一盆小植物）；延伸出來的左牆沒有掛畫；夜晚場景的串燈與駭客霓虹線只覆蓋原本的房間範圍，不跟著延伸。
+
+## 補強：名牌錯位、新桌子裝飾、Copilot Chat 監看（post-v1）
+
+- **名牌錯位（bug）**：4 / 6 桌時名牌、頭上圖示與手上的杯子 / 書跟角色分離。原因是我為了置中把整個場景平移了半個延伸量，而這些東西是用世界座標算位置再當成區域座標設定。改為**移動相機而不是場景**（`cameraPose(extra)`），場景座標不再被平移；`seats.spec.ts` 新增「6 桌時名牌在角色上方」的回歸測試。
+- **新桌子與氛圍**：桌 C–F 改為完整桌面（檯燈、紙張、植物）；`WallExtension.tsx` 為延伸的左牆加白板、畫、時鐘、書架，地板遠端加植物（太空站版：儀表板、舷窗、氧氣瓶、補給箱）；夜晚的串燈與駭客的霓虹線隨牆延伸。
+- **移除「每個座位的角色」下拉選單**：改以點擊角色為唯一的指定方式（設定仍存 `assignments`，選單的「預設」可取消）。
+- **VS Code Copilot Chat**：`adapters/copilotChat.ts` 解析 `chatSessions/*.jsonl`（VS Code 的 append-only 變更紀錄：`kind 0` 快照、`kind 1` 設值、`kind 2` 截斷後追加）。對照本機真實紀錄與擴充 0.48 驗證過的對應：新 request → TASK_STARTED；`toolInvocationSerialized` → TOOL_STARTED / COMPLETED（`toolId` 對應 READ / SEARCH / WRITE / EXEC）；`modelState` 1、2 → 完成，3 → 失敗，4 → 等待批准。紀錄檔會在請求結束後補寫最後一批工具，所以請求結束後忽略它的後續工具事件。`TranscriptWatcher` 泛化為可指定深度與檔名過濾；`CUBICLE_COPILOT_ROOT` 可覆寫位置（測試用）。
+- **未驗證 / 限制**：`modelState` 的數值（4 = 需要輸入）是依 VS Code 原始碼記憶與本機紀錄中出現的數值推定，沒有實際觸發一次「等待批准」來對照；舊版 `.json` 聊天、Copilot CLI（`globalStorage/github.copilot-chat/copilotCli`）與雲端 agent 沒有支援；Windows / Linux 的路徑是依 VS Code 慣例填的，沒有在那些平台測過。

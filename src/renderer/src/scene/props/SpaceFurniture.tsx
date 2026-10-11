@@ -3,6 +3,7 @@ import { S } from '../spaceMaterials'
 import { Ball, Block, Cyl } from '../primitives'
 import { Plant } from './Plant'
 import { ROOM, WINDOW, floorGeometry } from './Room'
+import { SpaceExtension } from './WallExtension'
 import { DESK, activeWorkstations, type WorkstationSpec } from './WorkDesk'
 import { COFFEE_BAR, TERMINAL, roomExtra, type DeskCount } from './layout'
 
@@ -1036,6 +1037,7 @@ export function SpaceFurniture({ desks }: { desks: DeskCount }) {
   return (
     <group>
       <Hull extra={roomExtra(desks)} />
+      <SpaceExtension desks={desks} />
       {activeWorkstations(desks).map((ws) => (
         <StationDesk key={ws.id} spec={ws} />
       ))}

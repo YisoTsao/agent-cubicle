@@ -62,6 +62,20 @@ export function frameHeightFor(extra: number): number {
   return CAMERA.frameHeight + extra * 0.55
 }
 
+/**
+ * Camera pose for an office that grew by `extra` metres towards +z: the same isometric angle,
+ * aimed at the middle of the longer room (the scene itself never moves, so world coordinates
+ * stay valid for everything attached to a character).
+ */
+export function cameraPose(extra: number): {
+  position: [number, number, number]
+  target: [number, number, number]
+} {
+  const [px, py, pz] = CAMERA.position
+  const [tx, ty, tz] = CAMERA.target
+  return { position: [px, py, pz + extra / 2], target: [tx, ty, tz + extra / 2] }
+}
+
 export const LIGHTING = {
   sun: {
     position: [-6, 10, 5] as [number, number, number],

@@ -9,6 +9,38 @@
 - **隱私**：不會讀取或轉送 prompt 與檔案內容；名牌上的路徑只顯示檔名。所有資料都留在本機。
 - **多 agent**：每個 session 一個角色，兩張辦公桌、共用的終端機與沙發、等待區，再多就顯示「+N」。
 
+## 系統流程
+
+```mermaid
+flowchart LR
+   subgraph Sources[事件來源]
+      Hooks[Claude Code Hooks]
+      Transcript[Claude JSONL 紀錄]
+      Copilot[VS Code Copilot Chat 紀錄]
+      Webhook[Webhook／自訂 Agent]
+   end
+
+   Hooks --> HookCLI[Hook CLI]
+   HookCLI --> Server[本機 HTTP Server]
+   Webhook --> Server
+   Transcript --> Watcher[Transcript Watcher]
+   Copilot --> Watcher
+   Server --> Router[IngestRouter：Hook 優先；忽略同 session Transcript]
+   Watcher --> Router
+
+   Router --> Map[Adapter 映射與事件正規化]
+   Map --> Hub[EventHub 驗證、去重、排序與狀態更新]
+   Hub --> Tick[逾時處理與座位分配]
+   Tick --> Snapshot[產生 session 快照]
+   Snapshot --> Broadcast[HubService 合併狀態更新]
+   Broadcast --> IPC[IPC／Preload]
+
+   IPC --> Store[Renderer Agent Store]
+   Store --> Presentation[狀態映射、角色與座位]
+   Presentation --> Scene[React Three Fiber 辦公室場景]
+   Scene --> UI[狀態標籤、設定與診斷 UI]
+```
+
 ## 安裝
 
 到 Releases 下載對應平台的安裝檔（macOS `.dmg`、Windows `.exe`、Linux `.AppImage`），或依下方「打包」自行建置。
@@ -138,10 +170,9 @@ App 圖示來自 `build/icon.png`（1024×1024），electron-builder 會自動�
 
 設定面板的「辦公室」可以選 **2 / 4 / 6 張桌子**（預設 2 張，也就是原本的房間）。選 4 或 6 張時，房間會沿著左牆往前延伸，新桌子排在延伸出來的區域，沙發與咖啡區位置不變；四個場景（辦公室、夜晚、駭客、太空站）都適用。桌子越多，同時能各自坐在桌前的 agent 越多，超過的會到等待區。
 
-角色是**跟著座位**的，有兩種指定方式：
+角色是**跟著座位**的：
 
-- **設定 →「每個座位的角色」**：每張桌子（和兩個等待位）一個下拉選單，選「跟隨上方設定」就是用「角色」那一區的選擇（預設組合 / 單一角色 / 自動）。
-- **直接點場景裡的角色**：底部會彈出選單，選一個角色就套用到它的座位。
+- **點場景裡的角色**：底部會彈出選單，選一個角色就套用到它的座位；選「預設」就取消指定，回到「設定 → 角色」那一區的選擇（預設組合 / 單一角色 / 自動）。
 
 指定會存進 `settings.json`，重開 App 仍然保留；同一張桌子上換了別的 agent，也還是同一個角色。
 
@@ -173,6 +204,16 @@ App 圖示來自 `build/icon.png`（1024×1024），electron-builder 會自動�
 4. 之後開的 Claude Code session 都會出現在辦公室裡。要移除：同一個地方按「中斷連接…」。
 
 沒有安裝 hooks 時，AgentCubicle 也會讀取 `~/.claude/projects/` 下的紀錄檔推估活動（較不精準，沒有「等待批准」）。
+
+## 連接 VS Code Copilot Chat
+
+不需要設定：只要本機有 VS Code（穩定版或 Insiders），AgentCubicle 就會**唯讀**監看 Copilot Chat 存在 `workspaceStorage/<工作區>/chatSessions/*.jsonl` 的聊天紀錄（macOS：`~/Library/Application Support/Code/User/`，Windows：`%APPDATA%\Code\User\`，Linux：`~/.config/Code/User/`），每個聊天顯示成一個 agent，名牌是「GitHub Copilot · 工作區資料夾名」。
+
+- 反映的狀態：送出提問 → 思考；讀檔／搜尋／改檔／終端機 → 對應的動作；Copilot 在等你批准 → 等待批准；回應結束或失敗 → 完成或錯誤。
+- 隱私：只取工具種類與檔名；你的提問、Copilot 的回答、思考內容與**終端機指令**都不會讀取或顯示。
+- 只追蹤 AgentCubicle 啟動後新增的內容（不重播歷史）；啟動時 2 分鐘內有動靜的聊天會直接顯示。
+- 限制：這是 Copilot Chat 擴充**未公開**的紀錄格式（已對照 0.48 版驗證），VS Code 或擴充更新後可能失效；只支援新版的 `.jsonl` 紀錄，舊版整份 `.json` 不支援；Copilot CLI 與雲端 agent 不在範圍內。
+- 設定面板的「VS Code Copilot Chat」會顯示目前監看幾個聊天檔、轉成幾個事件。
 
 其他 agent 請見 [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)（Webhook、curl / Python 範例）。
 

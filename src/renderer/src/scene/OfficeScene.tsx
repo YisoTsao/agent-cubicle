@@ -12,6 +12,7 @@ import { Sky } from './Sky'
 import { applyMaterialTheme } from './materials'
 import { BackWall, TerminalScreens } from './props/BackWall'
 import { Lounge } from './props/Lounge'
+import { OfficeExtension } from './props/WallExtension'
 import { Room, ROOM } from './props/Room'
 import { DeskScreen, activeWorkstations, WorkDesk } from './props/WorkDesk'
 import { roomExtra, type DeskCount } from './props/layout'
@@ -39,6 +40,7 @@ const StaticFurniture = memo(function StaticFurniture({
       ))}
       <Lounge />
       <BackWall />
+      <OfficeExtension desks={desks} />
     </StaticBatch>
   )
 })
@@ -56,32 +58,30 @@ export function OfficeScene() {
     <group>
       <Sky />
       {/* A bigger office grows towards +z; slide it back so the whole room stays centred. */}
-      <group position={[0, 0, -extra / 2]}>
-        <StaticFurniture station={THEMES[scene].furniture === 'space'} desks={desks} />
-        {scene === 'hacker' && <HackerDecor />}
-        {scene === 'night' && <NightDecor />}
+      <StaticFurniture station={THEMES[scene].furniture === 'space'} desks={desks} />
+      {scene === 'hacker' && <HackerDecor extra={extra} />}
+      {scene === 'night' && <NightDecor extra={extra} />}
 
-        {/* Live props driven by agent state */}
-        {activeWorkstations(desks).map((ws) => {
-          const agent = agents.find((a) => a.deskId === ws.id)
-          return (
-            <DeskScreen
-              key={ws.id}
-              spec={ws}
-              mode={(agent && PRESENTATION[agent.state].screen) ?? 'idle'}
-            />
-          )
-        })}
-        <TerminalScreens active={agents.some((a) => PRESENTATION[a.state].terminal === 'active')} />
+      {/* Live props driven by agent state */}
+      {activeWorkstations(desks).map((ws) => {
+        const agent = agents.find((a) => a.deskId === ws.id)
+        return (
+          <DeskScreen
+            key={ws.id}
+            spec={ws}
+            mode={(agent && PRESENTATION[agent.state].screen) ?? 'idle'}
+          />
+        )
+      })}
+      <TerminalScreens active={agents.some((a) => PRESENTATION[a.state].terminal === 'active')} />
 
-        {agents.map((agent) => (
-          <AgentCharacter key={`${agent.id}#${generation}`} agent={agent} />
-        ))}
-      </group>
+      {agents.map((agent) => (
+        <AgentCharacter key={`${agent.id}#${generation}`} agent={agent} />
+      ))}
 
       {/* Soft ground shadow under the floating diorama */}
       <ContactShadows
-        position={[0, -ROOM.slabDepth - 0.03, 0]}
+        position={[0, -ROOM.slabDepth - 0.03, extra / 2]}
         scale={11}
         blur={2.8}
         opacity={0.45}

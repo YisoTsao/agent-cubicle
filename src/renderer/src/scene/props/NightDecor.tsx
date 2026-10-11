@@ -131,7 +131,7 @@ function Candle() {
   )
 }
 
-export function NightDecor() {
+export function NightDecor({ extra = 0 }: { extra?: number }) {
   return (
     <group>
       <NightWindow />
@@ -142,8 +142,8 @@ export function NightDecor() {
       />
       <StringLights
         from={[-half + 0.08, 2.5, -half + 0.1]}
-        to={[-half + 0.08, 2.5, half - 0.1]}
-        count={18}
+        to={[-half + 0.08, 2.5, half - 0.1 + extra]}
+        count={Math.round(18 * (1 + extra / (half * 2)))}
       />
       <Candle />
     </group>

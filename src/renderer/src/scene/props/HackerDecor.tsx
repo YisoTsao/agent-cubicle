@@ -140,14 +140,22 @@ function NeonSign() {
   )
 }
 
-export function HackerDecor() {
+export function HackerDecor({ extra = 0 }: { extra?: number }) {
   return (
     <group>
       {/* Neon strips on both walls and along the floor edge */}
       <Strip color="#19e3ff" size={[half * 2, 0.03, 0.025]} position={[0, 2.15, -half + 0.03]} />
-      <Strip color="#ff2bd6" size={[0.025, 0.03, half * 2]} position={[-half + 0.03, 2.15, 0]} />
+      <Strip
+        color="#ff2bd6"
+        size={[0.025, 0.03, half * 2 + extra]}
+        position={[-half + 0.03, 2.15, extra / 2]}
+      />
       <Strip color="#19e3ff" size={[half * 2, 0.02, 0.02]} position={[0, 0.035, -half + 0.05]} />
-      <Strip color="#ff2bd6" size={[0.02, 0.02, half * 2]} position={[-half + 0.05, 0.035, 0]} />
+      <Strip
+        color="#ff2bd6"
+        size={[0.02, 0.02, half * 2 + extra]}
+        position={[-half + 0.05, 0.035, extra / 2]}
+      />
       {/* Frame the code wall */}
       <Strip
         color="#39ff14"

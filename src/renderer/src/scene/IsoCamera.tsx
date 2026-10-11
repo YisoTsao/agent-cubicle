@@ -2,7 +2,7 @@ import { OrthographicCamera } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import { useLayoutEffect, useRef } from 'react'
 import type { OrthographicCamera as OrthoCam } from 'three'
-import { CAMERA, frameHeightFor } from '../config/render'
+import { CAMERA, cameraPose, frameHeightFor } from '../config/render'
 import { useSettings } from '../store/settings'
 import { roomExtra } from './props/layout'
 
@@ -10,21 +10,25 @@ import { roomExtra } from './props/layout'
 export function IsoCamera() {
   const ref = useRef<OrthoCam>(null)
   const height = useThree((s) => s.size.height)
-  const frame = frameHeightFor(roomExtra(useSettings((s) => s.desks)))
+  const extra = roomExtra(useSettings((s) => s.desks))
+  const frame = frameHeightFor(extra)
+  const pose = cameraPose(extra)
 
   useLayoutEffect(() => {
     const cam = ref.current
     if (!cam) return
     cam.zoom = height / frame
-    cam.lookAt(...CAMERA.target)
+    cam.position.set(...pose.position)
+    cam.lookAt(...pose.target)
     cam.updateProjectionMatrix()
-  }, [height, frame])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [height, frame, extra])
 
   return (
     <OrthographicCamera
       ref={ref}
       makeDefault
-      position={CAMERA.position}
+      position={pose.position}
       near={CAMERA.near}
       far={CAMERA.far}
     />

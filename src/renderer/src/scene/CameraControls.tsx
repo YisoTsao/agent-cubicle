@@ -2,7 +2,7 @@ import { OrbitControls } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import { useEffect, useRef, type ComponentRef } from 'react'
 import type { OrthographicCamera } from 'three'
-import { CAMERA, frameHeightFor } from '../config/render'
+import { cameraPose, frameHeightFor } from '../config/render'
 import { useSettings } from '../store/settings'
 import { roomExtra } from './props/layout'
 
@@ -16,33 +16,37 @@ export function CameraControls() {
   const ref = useRef<ComponentRef<typeof OrbitControls>>(null)
   const camera = useThree((s) => s.camera) as OrthographicCamera
   const height = useThree((s) => s.size.height)
-  const frame = frameHeightFor(roomExtra(useSettings((s) => s.desks)))
+  const extra = roomExtra(useSettings((s) => s.desks))
+  const frame = frameHeightFor(extra)
+  const pose = cameraPose(extra)
 
   useEffect(() => {
     if (resets === 0) return
     // Back to the exact isometric pose (OrbitControls.reset() would restore whatever the camera
     // was at construction, which is not guaranteed to be the isometric one).
-    camera.position.set(...CAMERA.position)
+    camera.position.set(...pose.position)
     camera.up.set(0, 1, 0)
     camera.zoom = height / frame
-    ref.current?.target.set(...CAMERA.target)
-    camera.lookAt(...CAMERA.target)
+    ref.current?.target.set(...pose.target)
+    camera.lookAt(...pose.target)
     camera.updateProjectionMatrix()
     ref.current?.update()
     // Only when the button is pressed, not when the viewport resizes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resets])
+  }, [resets, extra])
 
   useEffect(() => {
     if (mode !== 'free') return
     return () => {
-      camera.position.set(...CAMERA.position)
+      camera.position.set(...pose.position)
       camera.up.set(0, 1, 0)
       camera.zoom = height / frame
-      camera.lookAt(...CAMERA.target)
+      camera.lookAt(...pose.target)
       camera.updateProjectionMatrix()
     }
-  }, [mode, camera, height, frame])
+    // `pose` is derived from `extra`, which is listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, camera, height, frame, extra])
 
   if (mode !== 'free') return null
   const base = height / frame
@@ -50,7 +54,7 @@ export function CameraControls() {
     <OrbitControls
       ref={ref}
       makeDefault
-      target={CAMERA.target}
+      target={pose.target}
       enablePan={false}
       enableDamping
       dampingFactor={0.12}

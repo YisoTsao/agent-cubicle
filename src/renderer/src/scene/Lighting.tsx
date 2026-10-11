@@ -13,7 +13,7 @@ export function Lighting() {
   const theme = THEMES[useSettings((s) => s.scene)]
   const { sun: themeSun, hemisphere, accents } = theme.lighting
   const sun = { ...LIGHTING.sun, ...themeSun }
-  // A bigger office is shifted by -extra/2 along z, so the lights follow it and the shadow map grows.
+  // A bigger office reaches further along +z, so the shadow map grows with it.
   const extra = roomExtra(useSettings((s) => s.desks))
   const e = sun.shadowExtent + extra * 0.6
   return (
@@ -39,7 +39,7 @@ export function Lighting() {
         <pointLight
           key={i}
           color={a.color}
-          position={[a.position[0], a.position[1], a.position[2] - extra / 2]}
+          position={a.position}
           intensity={a.intensity}
           distance={a.distance}
           decay={2}

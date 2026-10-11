@@ -2,10 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { HookPlanView, IntegrationStatus } from '@shared/ipc'
 import type { QualityLevel } from '../config/render'
 import { CHARACTERS } from '../characters/roster'
-import { PLACE_GROUPS } from '../characters/places'
-import { activeWorkstations } from '../scene/props/WorkDesk'
 import { DESK_COUNTS } from '../scene/props/layout'
-import { seatLabel } from './AgentPicker'
 import { SCENE_IDS, THEMES } from '../config/themes'
 import { useAgents } from '../store/agents'
 import { useSettings } from '../store/settings'
@@ -75,13 +72,6 @@ export function IntegrationPanel({ onClose }: { onClose(): void }) {
   const resetCamera = useSettings((s) => s.resetCamera)
   const desks = useSettings((s) => s.desks)
   const setDesks = useSettings((s) => s.setDesks)
-  const agents = useAgents((s) => s.agents)
-  const assignments = useAgents((s) => s.assignments)
-  const assign = useAgents((s) => s.assign)
-  const seatKeys = [
-    ...activeWorkstations(desks).map((ws) => ws.id),
-    ...PLACE_GROUPS['wait']!.map((id) => id),
-  ]
 
   return (
     <div className="panel" role="dialog" aria-label="設定與連接" data-testid="integration-panel">
@@ -232,39 +222,8 @@ export function IntegrationPanel({ onClose }: { onClose(): void }) {
         </div>
         <p className="muted small">
           換角色只改外觀，狀態與動作完全相同。「預設組合」是第一張桌小鴨、第二張桌 Kuro；「自動」依
-          agent 分配不同角色；選單一角色則所有 agent 都用它。
-        </p>
-      </section>
-
-      <section>
-        <h3>每個座位的角色</h3>
-        <div className="seats" data-testid="seat-assignments">
-          {seatKeys.map((key) => {
-            const who = agents.find((a) => a.seatKey === key)
-            return (
-              <label key={key} className="seat-row small">
-                <span className="seat-row__name">
-                  {seatLabel(key)}
-                  <span className="muted"> {who ? who.name : '空位'}</span>
-                </span>
-                <select
-                  data-testid={`seat-${key}`}
-                  value={assignments[key] ?? ''}
-                  onChange={(e) => assign(key, e.target.value || null)}
-                >
-                  <option value="">跟隨上方設定</option>
-                  {CHARACTERS.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )
-          })}
-        </div>
-        <p className="muted small">
-          也可以直接點場景裡的角色來換。角色跟著座位走：同一張桌子上的 agent 總是這個角色。
+          agent 分配不同角色；選單一角色則所有 agent
+          都用它。想讓某個座位用不同角色，直接點場景裡的角色即可。
         </p>
       </section>
 
@@ -354,6 +313,27 @@ export function IntegrationPanel({ onClose }: { onClose(): void }) {
         )}
         <p className="muted small">
           未安裝 hooks 時，從 JSONL 紀錄推估工具使用；已透過 hooks 回報的 session 會以 hooks 為準。
+        </p>
+      </section>
+
+      <section>
+        <h3>VS Code Copilot Chat（唯讀）</h3>
+        {status && (
+          <p>
+            <span
+              className={`dot ${status.copilot.enabled && status.copilot.files > 0 ? 'dot--ok' : 'dot--off'}`}
+            />{' '}
+            {!status.copilot.enabled
+              ? '已停用'
+              : status.copilot.roots.length === 0
+                ? '找不到 VS Code 的聊天紀錄資料夾'
+                : `監看 ${status.copilot.files} 個聊天檔 · 已轉成 ${status.copilot.events} 個事件`}
+          </p>
+        )}
+        <p className="muted small">
+          讀取 VS Code 存在本機的 Copilot Chat 紀錄（只讀、不修改），把它的工具使用顯示成一個
+          agent。 只取工具種類與檔名；你的提問、回答與終端機指令都不會讀取或顯示。這是 Copilot
+          未公開的紀錄格式，VS Code 更新後可能失效。
         </p>
       </section>
 

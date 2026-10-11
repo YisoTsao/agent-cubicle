@@ -60,6 +60,8 @@ export interface IntegrationStatus {
     | { state: 'error'; message: string }
   hooks: { path: string; installed: boolean; error?: string; lastEventAt: number; count: number }
   transcripts: { enabled: boolean; root: string; files: number; lines: number }
+  /** VS Code Copilot Chat session files (read-only tailing). */
+  copilot: { enabled: boolean; roots: string[]; files: number; lines: number; events: number }
 }
 
 export interface HookPlanView {

@@ -25,10 +25,10 @@ export const WORKSTATIONS: readonly WorkstationSpec[] = [
   { id: 'desk-a', center: [-1.4, -1.58], decor: 'full' },
   { id: 'desk-b', center: [1.3, 0.7], decor: 'minimal' },
   // Extra rows, only present when the office is set to 4 or 6 desks (the room grows to fit).
-  { id: 'desk-c', center: [-1.4, 4.3], decor: 'minimal' },
-  { id: 'desk-d', center: [1.3, 4.3], decor: 'minimal' },
-  { id: 'desk-e', center: [-1.4, 6.9], decor: 'minimal' },
-  { id: 'desk-f', center: [1.3, 6.9], decor: 'minimal' },
+  { id: 'desk-c', center: [-1.4, 4.3], decor: 'full' },
+  { id: 'desk-d', center: [1.3, 4.3], decor: 'full' },
+  { id: 'desk-e', center: [-1.4, 6.9], decor: 'full' },
+  { id: 'desk-f', center: [1.3, 6.9], decor: 'full' },
 ]
 
 /** The desks that exist for a given desk count. */
