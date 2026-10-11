@@ -17,6 +17,10 @@ const leftDesks = (desks: DeskCount) => activeWorkstations(desks).filter((ws) =>
 /** Far edge of the floor (world z). */
 const zEnd = (desks: DeskCount) => ROOM.half + roomExtra(desks)
 
+/** A wall piece `halfLength` long centred at `z` must stay inside the wall (with a margin). */
+const fitsWall = (desks: DeskCount, z: number, halfLength: number) =>
+  z + halfLength <= zEnd(desks) - 0.15
+
 function Whiteboard({ z }: { z: number }) {
   const notes: [number, number, keyof typeof materials][] = [
     [-0.32, 0.12, 'fabricMustard'],
@@ -185,7 +189,7 @@ export function OfficeExtension({ desks }: { desks: DeskCount }) {
             <Print z={ws.center[1] - 0.32} kind={1} />
           )}
           {i % 2 === 1 && <Print z={ws.center[1] + 0.45} kind={2} w={0.5} h={0.4} />}
-          <Shelf z={ws.center[1] + 1.35} />
+          {fitsWall(desks, ws.center[1] + 1.35, 0.45) && <Shelf z={ws.center[1] + 1.35} />}
         </group>
       ))}
       <Clock z={3.15} />
@@ -291,7 +295,9 @@ export function SpaceExtension({ desks }: { desks: DeskCount }) {
       {rows.map((ws, i) => (
         <group key={ws.id}>
           {i % 2 === 0 ? <Panel z={ws.center[1]} leds="cyan" /> : <SidePorthole z={ws.center[1]} />}
-          <Panel z={ws.center[1] + 1.3} y={1.45} leds="amber" />
+          {fitsWall(desks, ws.center[1] + 1.3, 0.5) && (
+            <Panel z={ws.center[1] + 1.3} y={1.45} leds="amber" />
+          )}
         </group>
       ))}
       {desks === 6 && <Panel z={5.65} y={2.0} leds="cyan" />}

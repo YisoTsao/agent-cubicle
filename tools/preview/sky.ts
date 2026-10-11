@@ -41,6 +41,7 @@ async function main(): Promise<void> {
       })
       await page.waitForSelector('[data-testid="stage"][data-ready="true"]')
       await page.waitForTimeout(scene.includes(':') ? 26000 : 2000)
+      await page.addStyleTag({ content: '.diagnostics,.dev-panel{display:none}' })
       const file = resolve(outDir, `${scene.replace(':', '-')}.png`)
       await page.screenshot({ path: file })
       console.log('wrote', file)
