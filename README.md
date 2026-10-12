@@ -1,13 +1,41 @@
 # AgentCubicle
 
-把本機 AI Agent（Claude Code、Codex CLI、Aider、自製 agent…）的工作狀態，變成一間溫暖的等角視角小辦公室：
+把本機 AI Agent 的工作狀態，變成一間溫暖的等角視角小辦公室：
 讀檔時翻書、寫程式時打字、跑指令時走到終端機、等你批准時舉手、完成時歡呼、出錯時抓頭。
+
+目前支援 **Claude Code**（hooks／紀錄檔）與 **VS Code Copilot Chat**（唯讀監看），其他 agent 可透過 **Webhook** 接入。
 
 ![多個 agent 同時工作](tests/visual/baseline/phase4-multi-agent.png)
 
 - **只觀察、不控制**：不會批准、阻擋或修改任何 agent 的行為。
 - **隱私**：不會讀取或轉送 prompt 與檔案內容；名牌上的路徑只顯示檔名。所有資料都留在本機。
-- **多 agent**：每個 session 一個角色，兩張辦公桌、共用的終端機與沙發、等待區，再多就顯示「+N」。
+- **多 agent**：每個 session 一個角色。預設 2 張辦公桌，可在設定調整為 4 或 6 張；座位不夠時，其餘 agent 在等待區排隊，超過的顯示「+N」。
+
+> 一般使用者請看 **[使用說明手冊（docs/USER_MANUAL.md）](docs/USER_MANUAL.md)**。
+> 本文件是給開發者：如何建置、測試、打包與參與開發。
+
+## 快速開始（開發者）
+
+前置需求：
+
+- **Node.js 22**（`node -v` 應顯示 `v22.x`）
+- **pnpm 12.8.1**：執行 `corepack enable`，會依 `package.json` 的 `packageManager` 自動取得
+- **Git**
+
+```sh
+git clone https://github.com/YisoTsao/agent-cubicle.git
+cd agent-cubicle
+pnpm install        # 會順便下載 Electron，第一次需要幾分鐘
+pnpm dev            # 啟動開發版 App
+```
+
+確認程式碼與測試都正常：
+
+```sh
+pnpm format:check && pnpm lint && pnpm typecheck && pnpm test
+```
+
+這與 CI（`.github/workflows/ci.yml`）執行的檢查相同。
 
 ## 系統流程
 
@@ -43,18 +71,14 @@ flowchart LR
 
 ## 安裝
 
-到 Releases 下載對應平台的安裝檔（macOS `.dmg`、Windows `.exe`、Linux `.AppImage`），或依下方「打包」自行建置。
+若 repo 已發佈 Release，可到 Releases 下載對應平台的安裝檔（macOS `.dmg`、Windows `.exe`、Linux `.AppImage`）；
+否則請依下方「打包」自行建置。
 
 ## 打包
 
 ### 事前準備（所有平台共通）
 
-- Node.js 22、pnpm 12（`corepack enable` 會依 `package.json` 的 `packageManager` 自動取得）
-- 第一次先安裝依賴（會順便下載 Electron）：
-
-```sh
-pnpm install
-```
+完成上方「快速開始」的 `pnpm install`。
 
 | 指令              | 產出（都在 `dist/`）                                                   |
 | ----------------- | ---------------------------------------------------------------------- |
@@ -66,7 +90,11 @@ pnpm install
 
 架構預設跟著執行 Node 的機器。要指定時在後面加 `--`：`pnpm dist:mac -- --arm64`、`--x64` 或 `--universal`（Intel + Apple Silicon 通用，檔案約兩倍大）。
 
-打包後可跑 smoke test 確認 App 能啟動：`pnpm dist:dir && pnpm test:packaged`。
+打包後可跑 smoke test 確認 App 能啟動：
+
+```sh
+pnpm dist:dir && pnpm test:packaged
+```
 
 ### macOS
 
@@ -86,9 +114,9 @@ CSC_IDENTITY_AUTO_DISCOVERY=false pnpm dist:mac -- --x64     # Intel Mac
    未簽章版只有第一次需要這樣做。
 3. 若從網路下載後出現「已損毀，無法打開」，是 Gatekeeper 的隔離標記，移除即可：
 
-```sh
-xattr -cr /Applications/AgentCubicle.app
-```
+   ```sh
+   xattr -cr /Applications/AgentCubicle.app
+   ```
 
 正式簽章與公證（需要 Apple Developer Program）：
 
@@ -116,7 +144,6 @@ pnpm dist:win
 ### Linux
 
 ```sh
-pnpm install
 pnpm dist:linux                  # x64
 pnpm dist:linux -- --arm64       # ARM64
 ```
@@ -140,7 +167,7 @@ AppImage 需要 FUSE 2。Ubuntu 22.04 以後若出現 `dlopen(): error loading l
 推送 `v` 開頭的 tag，`.github/workflows/release.yml` 會在 macOS / Windows / Linux runner 上各自打包，並上傳到一個 draft Release：
 
 ```sh
-# 先把 package.json 的 version 改成 0.1.0
+# 先把 package.json 的 version 改成要發佈的版本，例如 0.1.0
 git tag v0.1.0
 git push origin v0.1.0
 ```
@@ -149,52 +176,13 @@ git push origin v0.1.0
 
 App 圖示來自 `build/icon.png`（1024×1024），electron-builder 會自動轉成 `.icns` / `.ico`。
 
-## 換角色
-
-「設定」→「**角色**」可以切換辦公室裡的角色，馬上生效，選擇會被記住：
-
-| 角色           | 說明                                   |
-| -------------- | -------------------------------------- |
-| 上班族         | 原本的 Q 版小人（預設）                |
-| 自動           | 每個 agent 分配不同角色（依 agent id） |
-
-
-## 辦公室大小與每個座位的角色
-
-設定面板的「辦公室」可以選 **2 / 4 / 6 張桌子**（預設 2 張，也就是原本的房間）。選 4 或 6 張時，房間會沿著左牆往前延伸，新桌子排在延伸出來的區域，沙發與咖啡區位置不變；四個場景（辦公室、夜晚、駭客、太空站）都適用。桌子越多，同時能各自坐在桌前的 agent 越多，超過的會到等待區。
-
-角色是**跟著座位**的：
-
-- **點場景裡的角色**：底部會彈出選單，選一個角色就套用到它的座位；選「預設」就取消指定，回到「設定 → 角色」那一區的選擇（預設組合 / 單一角色 / 自動）。
-
-指定會存進 `settings.json`，重開 App 仍然保留；同一張桌子上換了別的 agent，也還是同一個角色。
-
-## 場景與視角
-
-「設定」→「**場景**」可以換整個辦公室的風格，家具位置與角色動線不變，只換佈置、顏色與燈光：
-
-| 場景       | 說明                                                                                                                                                   |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 溫暖辦公室 | 原本的暖色小辦公室（預設）                                                                                                                             |
-| 夜晚小屋   | 同樣的擺設，夜裡的暖燈、串燈、蠟燭，窗外是月亮與夜景，場景外有星空與月亮                                                                               |
-| 駭客基地   | 深色霓虹：發光網格地板、牆上的程式碼雨與 ROOT 霓虹招牌、綠色終端機                                                                                     |
-| 太空站     | 整個換成太空站家具：金屬艙壁與管線、舷窗外的地球、艙門、組員座椅與安全帶、廚房、電腦核心、水耕塔；所有角色穿太空服（玻璃頭盔、維生背包、胸前控制面板） |
-
-換場景只改佈置與燈光（太空站連家具外觀都換掉），家具的位置、尺寸與角色動線不變。
-
-駭客基地裡所有角色會戴上霓虹眼鏡與耳機麥克風，上班族換成黑色連帽衫。
-
-「**視角**」預設是固定等角；改成「自由旋轉」後，左鍵拖曳轉動、滾輪縮放，按「重設視角」或切回固定等角就回到預設畫面。
-
-角色不會陷進家具：`pnpm test` 會把每個角色擺到沙發、椅子、終端機等所有位置與動作，逐頂點檢查有沒有穿進家具（`src/renderer/src/scene/colliders.test.ts`），並檢查走路動線不撞到家具（`walking.test.ts`）。
-
 ## 連接 Claude Code
 
-1. 開啟 AgentCubicle，點右下角「**設定**」。
+1. 開啟 AgentCubicle，點右下角「**設定**」，進入「**設定與連接**」面板。
 2. 在「Claude Code」區按「**連接 Claude Code…**」。
 3. 檢查畫面上 `~/.claude/settings.json` 的差異（只會新增標有 `agentcubicle-hook` 的觀察用 hooks），按「**確認套用**」。
    原檔會先備份為 `settings.json.agentcubicle-backup-<時間>`。
-4. 之後開的 Claude Code session 都會出現在辦公室裡。要移除：同一個地方按「中斷連接…」。
+4. 之後開的 Claude Code session 都會出現在辦公室裡。要移除：同一個地方按「**中斷連接…**」。
 
 沒有安裝 hooks 時，AgentCubicle 也會讀取 `~/.claude/projects/` 下的紀錄檔推估活動（較不精準，沒有「等待批准」）。
 
@@ -209,6 +197,38 @@ App 圖示來自 `build/icon.png`（1024×1024），electron-builder 會自動�
 - 設定面板的「VS Code Copilot Chat」會顯示目前監看幾個聊天檔、轉成幾個事件。
 
 其他 agent 請見 [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)（Webhook、curl / Python 範例）。
+
+## 角色、場景與視角
+
+### 換角色
+
+「設定」→「**角色**」可以切換辦公室裡的角色，馬上生效，選擇會被記住：
+
+| 角色   | 說明                                   |
+| ------ | -------------------------------------- |
+| 上班族 | 原本的 Q 版小人（預設）                |
+| 自動   | 每個 agent 分配不同角色（依 agent id） |
+
+**指定單一座位的角色**：點場景裡的角色，底部會彈出選單，選一個角色就套用到它的座位；選「預設」就取消指定，回到「設定 → 角色」的選擇。指定會存進 `settings.json`，重開 App 仍然保留；同一張桌子上換了別的 agent，也還是同一個角色。
+
+### 辦公室大小
+
+設定面板的「辦公室」可以選 **2 / 4 / 6 張桌子**（預設 2 張）。選 4 或 6 張時，房間會沿著左牆往前延伸，新桌子排在延伸出來的區域，沙發與咖啡區位置不變；四個場景都適用。桌子越多，同時能各自坐在桌前的 agent 越多，超過的會到等待區。
+
+### 場景
+
+「設定」→「**場景**」可以換整個辦公室的風格，家具位置與角色動線不變，只換佈置、顏色與燈光：
+
+| 場景       | 說明                                                                                                                                                   |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 溫暖辦公室 | 原本的暖色小辦公室（預設）                                                                                                                             |
+| 夜晚小屋   | 同樣的擺設，夜裡的暖燈、串燈、蠟燭，窗外是月亮與夜景，場景外有星空與月亮                                                                               |
+| 駭客基地   | 深色霓虹：發光網格地板、牆上的程式碼雨與 ROOT 霓虹招牌、綠色終端機；角色戴上霓虹眼鏡與耳機麥克風，上班族換成黑色連帽衫                                 |
+| 太空站     | 整個換成太空站家具：金屬艙壁與管線、舷窗外的地球、艙門、組員座椅與安全帶、廚房、電腦核心、水耕塔；所有角色穿太空服（玻璃頭盔、維生背包、胸前控制面板） |
+
+### 視角
+
+「**視角**」預設是固定等角；改成「自由旋轉」後，左鍵拖曳轉動、滾輪縮放，按「重設視角」或切回固定等角就回到預設畫面。
 
 ## 角色在做什麼？
 
@@ -226,22 +246,26 @@ App 圖示來自 `build/icon.png`（1024×1024），electron-builder 會自動�
 
 ## 設定
 
-「設定」面板可以調整畫質（高 / 平衡 / 省電）與視窗置頂。視窗最小化或被遮住時會自動暫停繪製；省電模式限制在 30 FPS。
+「設定」面板可以調整畫質（高 / 平衡 / 省電）與視窗置頂，並管理角色、場景、辦公室大小與 agent 連接。視窗最小化或被遮住時會自動暫停繪製；省電模式限制在 30 FPS。
 
 ## 疑難排解
 
-| 狀況                            | 處理                                                                                                |
-| ------------------------------- | --------------------------------------------------------------------------------------------------- |
-| 「Port 9876 is already in use」 | 關掉另一個 AgentCubicle，或用環境變數 `CUBICLE_PORT` 指定其他埠（hooks 會自動跟著新埠，不需重裝）。 |
-| 連接後角色沒反應                | 在設定面板確認「最近事件」時間；若一直沒有事件，重新開一個 Claude Code session 再試。               |
-| 想完全移除                      | 先在設定面板「中斷連接」，再刪除 App 與 `~/.agentcubicle`。                                         |
-| settings.json 格式錯誤          | AgentCubicle 不會覆寫無法解析的檔案；修正後再試。                                                   |
+| 狀況                                                               | 處理                                                                                                |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `pnpm install` 最後失敗、出現 `Cannot find module '@electron/get'` | 通常是 Node 版本太舊。`node -v` 確認為 v22.x，並把 Node 22 放到 PATH 最前面。                       |
+| `pnpm` 版本不符                                                    | 執行 `corepack enable`，讓 pnpm 依 `packageManager` 切到 12.8.1。                                   |
+| 「Port 9876 is already in use」                                    | 關掉另一個 AgentCubicle，或用環境變數 `CUBICLE_PORT` 指定其他埠（hooks 會自動跟著新埠，不需重裝）。 |
+| 連接後角色沒反應                                                   | 在設定面板確認「最近事件」時間；若一直沒有事件，重新開一個 Claude Code session 再試。               |
+| `pnpm sim post` 顯示「Is the app running?」                        | 先啟動 App（`pnpm dev` 或已安裝的版本），模擬器會讀取 `~/.agentcubicle` 的連線資訊。                |
+| 想完全移除                                                         | 先在設定面板「中斷連接」，再刪除 App 與 `~/.agentcubicle`。                                         |
+| settings.json 格式錯誤                                             | AgentCubicle 不會覆寫無法解析的檔案；修正後再試。                                                   |
+| Linux 上 `pnpm test:e2e` 無法開視窗                                | 沒有顯示環境。CI 使用 `xvfb-run --auto-servernum pnpm test:e2e`。                                   |
 
 ## 專案目錄導覽
 
 ```text
-agentCubicle/
-├── packages/shared/src/       共用事件型別、狀態管理與模擬情境
+agent-cubicle/
+├── packages/shared/src/       共用事件型別、狀態管理與模擬情境（sim/）
 ├── src/
 │   ├── main/                  Electron 主程序、事件來源與本機 HTTP server
 │   │   └── adapters/          Claude Code、Copilot Chat 等來源轉換器
@@ -252,40 +276,50 @@ agentCubicle/
 │       ├── scene/             Three.js 場景、相機、燈光與家具
 │       ├── store/             Renderer 的 agent 與設定狀態
 │       └── ui/                設定、整合、診斷等介面
-├── assets/                    素材清單與授權資訊
+├── assets/                    素材清單與授權資訊（ASSETS.md、LICENSES.md）
 ├── build/                     App 圖示等打包資源
-├── docs/                      規格、進度、整合方式與測試紀錄
+├── docs/                      規格、進度、整合方式、使用手冊與測試紀錄
 ├── tests/                     Playwright 端對端、打包與視覺測試
 ├── tools/                     模擬器、預覽、截圖、soak 與驗證工具
+├── .github/workflows/         CI（ci.yml）與發佈（release.yml）
 ├── package.json               套件資訊與 pnpm 指令
 ├── electron.vite.config.mts   Electron Main、Preload、Renderer 建置設定
-├── vitest.config.mts           單元測試設定
-└── playwright*.config.mts      Playwright 測試設定
+├── electron-builder.yml       安裝檔打包設定
+├── vitest.config.mts          單元測試設定
+└── playwright*.config.mts     Playwright 測試設定
 ```
+
+`dist/`、`out/`、`test-results/` 是打包、建置或測試產物，已在 `.gitignore` 中，可隨時刪除重建；修改功能時主要編輯 `src/`、`packages/`、`tests/` 與 `tools/`。
 
 ### 從哪裡開始看
 
-| 想了解 | 建議先看 |
-| ------ | -------- |
-| 事件如何進入與更新狀態 | `src/main/ingest.ts`、`src/main/hubService.ts`、`packages/shared/src/hub.ts` |
-| Claude Code／Copilot 如何接入 | `src/main/adapters/`、`src/main/server.ts`、`docs/INTEGRATIONS.md` |
-| Main 如何安全地呼叫 Renderer | `src/preload/index.ts`、`packages/shared/src/ipc.ts` |
-| 畫面如何把狀態變成角色動作 | `src/renderer/src/store/agents.ts`、`src/renderer/src/characters/fromSession.ts` |
-| 3D 場景與家具怎麼組成 | `src/renderer/src/scene/OfficeScene.tsx`、`src/renderer/src/scene/props/` |
-| 專案設計與目前進度 | `docs/SPEC.md`、`docs/PROGRESS.md` |
-| 自動化測試在哪裡 | `packages/shared/src/*.test.ts`、`src/main/**/*.test.ts`、`tests/` |
+| 想了解                        | 建議先看                                                                                            |
+| ----------------------------- | --------------------------------------------------------------------------------------------------- |
+| 事件如何進入與更新狀態        | `src/main/ingest.ts`、`src/main/hubService.ts`、`packages/shared/src/hub.ts`                        |
+| Claude Code／Copilot 如何接入 | `src/main/adapters/`、`src/main/server.ts`、`docs/INTEGRATIONS.md`                                  |
+| Main 如何安全地呼叫 Renderer  | `src/preload/index.ts`、`packages/shared/src/ipc.ts`                                                |
+| 畫面如何把狀態變成角色動作    | `src/renderer/src/store/agents.ts`、`src/renderer/src/characters/fromSession.ts`                    |
+| 3D 場景與家具怎麼組成         | `src/renderer/src/scene/OfficeScene.tsx`、`src/renderer/src/scene/props/`                           |
+| 專案設計與目前進度            | `docs/SPEC.md`、`docs/PROGRESS.md`                                                                  |
+| 自動化測試在哪裡              | `packages/shared/src/*.test.ts`、`src/main/**/*.test.ts`、`src/renderer/src/**/*.test.ts`、`tests/` |
 
-`dist/`、`out/`、`test-results/` 是打包、預覽或測試產物，通常由指令自動產生；修改功能時主要編輯 `src/`、`packages/`、`tests/` 與 `tools/`。
+## 測試
+
+| 指令                 | 內容                                                                                                             |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `pnpm test`          | 單元測試（Vitest）。包含「角色不穿進家具」（`colliders.test.ts`）與「走路不撞家具」（`walking.test.ts`）的檢查。 |
+| `pnpm test:e2e`      | Playwright 端對端測試；會先執行 `pnpm build`。                                                                   |
+| `pnpm test:packaged` | 打包版 smoke test；需先 `pnpm dist:dir`。                                                                        |
+| `pnpm screenshots`   | 固定視角截圖，輸出到 `tests/visual/baseline/`，供人工比對（GPU 輸出因機器而異，不做像素比對）。                  |
 
 ## 開發
 
 ```sh
 pnpm dev                                   # 開發模式
-CUBICLE_DIAGNOSTICS=1 pnpm dev             # 顯示診斷與 Dev 面板（F3）
-pnpm sim list / pnpm sim post normal-task  # 模擬器
+CUBICLE_DIAGNOSTICS=1 pnpm dev             # 顯示診斷與 Dev 面板（也可在 App 內按 F3）
+pnpm sim list                              # 列出模擬情境
+pnpm sim post normal-task                  # 把情境送進正在執行的 App（需先開 App）
 pnpm test && pnpm test:e2e                 # 單元 + 端到端測試
-pnpm screenshots                           # 固定視角截圖基準
-pnpm dist:dir && pnpm test:packaged        # 打包版 smoke test
 pnpm build && SOAK_MINUTES=30 pnpm soak    # 長時間穩定性測試
 pnpm build && pnpm verify:claude           # 用真實 Claude Code 驗證（暫存 settings，少量額度）
 pnpm build && pnpm icon                    # 從 3D 場景重新產生 App 圖示
@@ -293,4 +327,4 @@ pnpm build && pnpm exec tsx tools/preview/capture.ts out/shots 640x720 duck,post
 pnpm build && pnpm exec tsx tools/preview/scene.ts out/shots duck WRITE IDLE              # 在辦公室裡看某個角色
 ```
 
-架構與規格：[docs/SPEC.md](docs/SPEC.md)；進度與量測：[docs/PROGRESS.md](docs/PROGRESS.md)。
+架構與規格：[docs/SPEC.md](docs/SPEC.md)；進度與量測：[docs/PROGRESS.md](docs/PROGRESS.md)；整合方式：[docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)；使用手冊：[docs/USER_MANUAL.md](docs/USER_MANUAL.md)。
