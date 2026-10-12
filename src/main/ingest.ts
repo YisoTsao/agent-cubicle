@@ -16,6 +16,8 @@ const COPILOT_FILE_MEMORY = 200
 export class IngestRouter {
   private readonly hookSeq = new Map<string, number>()
   private readonly copilot = new Map<string, CopilotChatMapper>()
+  /** VS Code workspace storage dir → id of the Copilot chat most recently seen there. */
+  private readonly copilotInWorkspace = new Map<string, string>()
   readonly stats = { hook: 0, hookIgnored: 0, log: 0, logSuperseded: 0, webhook: 0, copilot: 0 }
 
   constructor(private readonly hub: EventHub) {}
@@ -88,8 +90,34 @@ export class IngestRouter {
       this.copilot.set(file, m)
       if (this.copilot.size > COPILOT_FILE_MEMORY)
         this.copilot.delete(this.copilot.keys().next().value!)
+      this.supersedeCopilotChat(file, m.sessionId)
     }
     return m
+  }
+
+  /**
+   * Copilot Chat starts a new chat file when you switch model, so one conversation would show up
+   * as several agents. A new chat in a workspace therefore replaces the previous one there, unless
+   * that one is still working (then both stay until it finishes).
+   */
+  private supersedeCopilotChat(file: string, sessionId: string): void {
+    const workspace = dirname(dirname(file)) // workspaceStorage/<hash>
+    const previous = this.copilotInWorkspace.get(workspace)
+    this.copilotInWorkspace.set(workspace, sessionId)
+    if (!previous || previous === sessionId) return
+    const old = this.hub
+      .snapshot()
+      .sessions.find((s) => s.agentId === COPILOT_AGENT_ID && s.sessionId === previous)
+    if (!old || old.presence === 'ACTIVE' || old.presence === 'WAITING_APPROVAL') return
+    this.hub.ingest({
+      eventId: `cp:${previous}:superseded`,
+      agentId: COPILOT_AGENT_ID,
+      agentName: old.agentName,
+      sessionId: previous,
+      type: 'SESSION_ENDED',
+      timestamp: Date.now(),
+      source: 'log',
+    })
   }
 
   private fromLogEvent(event: AgentEvent): void {
