@@ -19,7 +19,7 @@ export interface TranscriptWatcherOptions {
   accept?(path: string): boolean
   onLine(line: string, file: string): void
   /** A transcript modified within `recentMs` before startup (an already running session). */
-  onRecentSession?(sessionId: string, lastLine: string | null): void
+  onRecentSession?(sessionId: string, tail: string | null): void
   /** Same moment, but gets the file path (for adapters that need more than the session id). */
   onRecentFile?(file: string): void
   recentMs?: number
@@ -102,7 +102,7 @@ export class TranscriptWatcher {
         if (Date.now() - s.mtimeMs < recentMs) {
           this.opts.onRecentFile?.(path)
           if (this.opts.onRecentSession)
-            this.opts.onRecentSession(basename(path, '.jsonl'), await lastLine(path, s.size))
+            this.opts.onRecentSession(basename(path, '.jsonl'), await tailOf(path, s.size))
         }
       } catch (err) {
         this.stats.errors++
@@ -188,18 +188,15 @@ export class TranscriptWatcher {
   }
 }
 
-async function lastLine(path: string, size: number): Promise<string | null> {
+/** The last 64 KB of a file as text (its first line may be cut; callers must tolerate that). */
+async function tailOf(path: string, size: number): Promise<string | null> {
   const len = Math.min(size, 64 * 1024)
   if (len === 0) return null
   const handle = await open(path, 'r')
   try {
     const buf = Buffer.alloc(len)
     await handle.read(buf, 0, len, size - len)
-    const lines = buf
-      .toString('utf8')
-      .split('\n')
-      .filter((l) => l.trim())
-    return lines.at(-1) ?? null
+    return buf.toString('utf8')
   } finally {
     await handle.close()
   }

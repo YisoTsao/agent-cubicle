@@ -42,7 +42,7 @@ describe('TranscriptWatcher', () => {
     })
     await watcher.start()
     expect(t.lines).toEqual([])
-    expect(t.recent).toEqual(['sess-1|{"old":2}'])
+    expect(t.recent).toEqual(['sess-1|{"old":1}\n{"old":2}\n'])
 
     appendFileSync(file, '{"new":1}\n')
     await waitFor(() => t.lines.length === 1)

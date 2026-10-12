@@ -10,6 +10,22 @@ import { claudeAgentName, toolDetail, toolKind } from './claudeTools'
 //   assistant stop_reason "end_turn"         → TASK_COMPLETED (main thread only)
 // Every other line type is ignored; malformed lines never throw.
 
+/**
+ * Name tag for a session whose transcript tail is already on disk (announced at startup). Not every
+ * line carries `cwd` (summaries, snapshots, meta lines), so search from the end for the newest one.
+ */
+export function agentNameFromTail(tail: string | null): string {
+  for (const line of (tail ?? '').split('\n').reverse()) {
+    try {
+      const cwd = (JSON.parse(line) as { cwd?: unknown } | null)?.cwd
+      if (typeof cwd === 'string' && cwd) return claudeAgentName(cwd)
+    } catch {
+      // partial or non-JSON line: keep looking
+    }
+  }
+  return claudeAgentName(undefined)
+}
+
 export function mapTranscriptLine(line: string, fallbackNow: number): AgentEvent[] {
   let o: unknown
   try {

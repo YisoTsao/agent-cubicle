@@ -3,7 +3,7 @@ import type { EventHub, IngestOutcome } from '@shared/hub'
 import { mapClaudeHook } from './adapters/claudeHooks'
 import { readFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
-import { mapTranscriptLine } from './adapters/claudeTranscript'
+import { agentNameFromTail, mapTranscriptLine } from './adapters/claudeTranscript'
 import { COPILOT_AGENT_ID, CopilotChatMapper, copilotAgentName } from './adapters/copilotChat'
 
 // Routes every source into the hub (SPEC §3/§5) and arbitrates between them:
@@ -47,12 +47,11 @@ export class IngestRouter {
   }
 
   /** A session that was active right before startup (announced once from its last line). */
-  fromRecentTranscript(sessionId: string, lastLine: string | null): void {
-    const sample = lastLine ? mapTranscriptLine(lastLine, Date.now())[0] : undefined
+  fromRecentTranscript(sessionId: string, tail: string | null): void {
     this.fromLogEvent({
       eventId: `log:${sessionId}:recent`,
       agentId: 'claude-code',
-      agentName: sample?.agentName ?? 'Claude Code',
+      agentName: agentNameFromTail(tail),
       sessionId,
       type: 'SESSION_STARTED',
       timestamp: Date.now(),
