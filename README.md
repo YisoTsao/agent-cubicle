@@ -156,15 +156,8 @@ App 圖示來自 `build/icon.png`（1024×1024），electron-builder 會自動�
 | 角色           | 說明                                   |
 | -------------- | -------------------------------------- |
 | 上班族         | 原本的 Q 版小人（預設）                |
-| You never know | 黃色小鴨                               |
-| Kuro           | 黑色兔耳                               |
-| Naughty        | 紅色小熊                               |
-| Nicky          | 藍色貓咪                               |
-| Belle          | 粉紅長毛                               |
-| John           | 奶油色、黑色垂耳的狗                   |
 | 自動           | 每個 agent 分配不同角色（依 agent id） |
 
-換角色只改外觀：狀態、動作、座位完全相同。六隻 mojojojo 角色是依產品圖量測輪廓後，用程式（Three.js）生成的 3D 模型，沒有內嵌任何圖片素材，詳見 [assets/LICENSES.md](assets/LICENSES.md)。
 
 ## 辦公室大小與每個座位的角色
 
