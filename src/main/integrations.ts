@@ -153,7 +153,7 @@ export class Integrations {
       const watcher = new TranscriptWatcher({
         root: claudeProjectsRoot(),
         onLine: (line) => this.router.fromTranscriptLine(line),
-        onRecentSession: (id, last) => this.router.fromRecentTranscript(id, last),
+        onRecentSession: (id, tail, head) => this.router.fromRecentTranscript(id, tail, head),
       })
       await watcher.start()
       this.watcher = watcher

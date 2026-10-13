@@ -38,7 +38,7 @@ describe('TranscriptWatcher', () => {
     watcher = new TranscriptWatcher({
       root: t.root,
       onLine: (l) => t.lines.push(l),
-      onRecentSession: (id, last) => t.recent.push(`${id}|${last}`),
+      onRecentSession: (id, tail) => t.recent.push(`${id}|${tail}`),
     })
     await watcher.start()
     expect(t.lines).toEqual([])

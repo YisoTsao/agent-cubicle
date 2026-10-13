@@ -19,7 +19,8 @@ export interface TranscriptWatcherOptions {
   accept?(path: string): boolean
   onLine(line: string, file: string): void
   /** A transcript modified within `recentMs` before startup (an already running session). */
-  onRecentSession?(sessionId: string, tail: string | null): void
+  /** `tail` = the last 64 KB, `head` = the first 64 KB (either may be null for an empty file). */
+  onRecentSession?(sessionId: string, tail: string | null, head: string | null): void
   /** Same moment, but gets the file path (for adapters that need more than the session id). */
   onRecentFile?(file: string): void
   recentMs?: number
@@ -102,7 +103,11 @@ export class TranscriptWatcher {
         if (Date.now() - s.mtimeMs < recentMs) {
           this.opts.onRecentFile?.(path)
           if (this.opts.onRecentSession)
-            this.opts.onRecentSession(basename(path, '.jsonl'), await tailOf(path, s.size))
+            this.opts.onRecentSession(
+              basename(path, '.jsonl'),
+              await readSpan(path, Math.max(0, s.size - SPAN), Math.min(s.size, SPAN)),
+              await readSpan(path, 0, Math.min(s.size, SPAN)),
+            )
         }
       } catch (err) {
         this.stats.errors++
@@ -188,14 +193,15 @@ export class TranscriptWatcher {
   }
 }
 
-/** The last 64 KB of a file as text (its first line may be cut; callers must tolerate that). */
-async function tailOf(path: string, size: number): Promise<string | null> {
-  const len = Math.min(size, 64 * 1024)
-  if (len === 0) return null
+const SPAN = 64 * 1024
+
+/** `len` bytes of a file from `start`, as text (a cut first or last line must be tolerated). */
+async function readSpan(path: string, start: number, len: number): Promise<string | null> {
+  if (len <= 0) return null
   const handle = await open(path, 'r')
   try {
     const buf = Buffer.alloc(len)
-    await handle.read(buf, 0, len, size - len)
+    await handle.read(buf, 0, len, start)
     return buf.toString('utf8')
   } finally {
     await handle.close()

@@ -11,19 +11,20 @@ import { claudeAgentName, toolDetail, toolKind } from './claudeTools'
 // Every other line type is ignored; malformed lines never throw.
 
 /**
- * Name tag for a session whose transcript tail is already on disk (announced at startup). Not every
- * line carries `cwd` (summaries, snapshots, meta lines), so search from the end for the newest one.
+ * The project directory (`cwd`) of the newest transcript line in `text` that carries one, or
+ * undefined. Not every line has `cwd` (summaries, snapshots, meta lines), and a cut line at either
+ * end of `text` is skipped.
  */
-export function agentNameFromTail(tail: string | null): string {
-  for (const line of (tail ?? '').split('\n').reverse()) {
+export function projectCwdIn(text: string | null): string | undefined {
+  for (const line of (text ?? '').split('\n').reverse()) {
     try {
       const cwd = (JSON.parse(line) as { cwd?: unknown } | null)?.cwd
-      if (typeof cwd === 'string' && cwd) return claudeAgentName(cwd)
+      if (typeof cwd === 'string' && cwd) return cwd
     } catch {
       // partial or non-JSON line: keep looking
     }
   }
-  return claudeAgentName(undefined)
+  return undefined
 }
 
 export function mapTranscriptLine(line: string, fallbackNow: number): AgentEvent[] {

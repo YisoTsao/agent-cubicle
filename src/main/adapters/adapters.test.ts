@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { AgentEvent } from '@shared/events'
 import { mapClaudeHook } from './claudeHooks'
-import { agentNameFromTail, mapTranscriptLine } from './claudeTranscript'
+import { mapTranscriptLine, projectCwdIn } from './claudeTranscript'
 import { claudeAgentName, toolDetail, toolKind } from './claudeTools'
 
 const common = { session_id: 'abc', cwd: '/Users/me/projects/shop', transcript_path: '/x.jsonl' }
@@ -111,17 +111,17 @@ describe('Claude tool helpers', () => {
 })
 
 describe('Claude transcript adapter', () => {
-  it('names a recovered session by the newest cwd in its tail, even when the last line has none', () => {
-    const tail = [
+  it('finds the newest cwd in a text span, skipping lines without one or cut at the edge', () => {
+    const text = [
+      'cut-line-at-the-start-of-the-span',
       JSON.stringify({ type: 'user', cwd: '/Users/me/work/api', sessionId: 's' }),
       JSON.stringify({ type: 'summary', summary: 'x' }),
       JSON.stringify({ type: 'file-history-snapshot' }),
+      '{"type":"assis',
     ].join('\n')
-    expect(agentNameFromTail(tail)).toBe('Claude Code · api')
-    expect(agentNameFromTail('{"type":"summary"}\n{"cwd":"/a/web"}\n{"type"')).toBe(
-      'Claude Code · web',
-    )
-    expect(agentNameFromTail(null)).toBe('Claude Code')
+    expect(projectCwdIn(text)).toBe('/Users/me/work/api')
+    expect(projectCwdIn('{"type":"summary"}')).toBeUndefined()
+    expect(projectCwdIn(null)).toBeUndefined()
   })
 
   const line = (o: object) =>
