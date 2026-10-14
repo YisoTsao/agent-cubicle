@@ -52,9 +52,11 @@ export function mapTranscriptLine(line: string, fallbackNow: number): AgentEvent
 
   const parsed = typeof rec.timestamp === 'string' ? Date.parse(rec.timestamp) : NaN
   const timestamp = Number.isFinite(parsed) ? parsed : fallbackNow
+  // A line without `cwd` says nothing about the project: leave the name out so the session keeps
+  // the project name it already has, instead of falling back to a bare "Claude Code".
   const base = {
     agentId: CLAUDE_AGENT_ID,
-    agentName: claudeAgentName(rec.cwd),
+    ...(typeof rec.cwd === 'string' && rec.cwd ? { agentName: claudeAgentName(rec.cwd) } : {}),
     sessionId: rec.sessionId.slice(0, 128),
     timestamp,
     source: 'log' as const,

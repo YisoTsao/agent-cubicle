@@ -51,10 +51,13 @@ export class IngestRouter {
 
   /** A session that was active right before startup (announced once from its last line). */
   fromRecentTranscript(sessionId: string, tail: string | null, head: string | null): void {
+    // Without a project there is nothing to tell this session apart by: wait for a line that has one.
+    const cwd = projectCwdIn(tail) ?? projectCwdIn(head)
+    if (!cwd) return
     this.fromLogEvent({
       eventId: `log:${sessionId}:recent`,
       agentId: 'claude-code',
-      agentName: claudeAgentName(projectCwdIn(tail) ?? projectCwdIn(head)),
+      agentName: claudeAgentName(cwd),
       sessionId,
       type: 'SESSION_STARTED',
       timestamp: Date.now(),

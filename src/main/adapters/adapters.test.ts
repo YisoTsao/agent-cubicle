@@ -133,6 +133,15 @@ describe('Claude transcript adapter', () => {
       ...o,
     })
 
+  it('leaves the agent name out of lines without a cwd, so the session keeps its project name', () => {
+    const [e] = mapTranscriptLine(
+      JSON.stringify({ type: 'user', sessionId: 's', uuid: 'u2', message: { content: 'hi' } }),
+      0,
+    )
+    expect(e?.type).toBe('TASK_STARTED')
+    expect(e).not.toHaveProperty('agentName')
+  })
+
   it('maps prompts, tool calls, results and end of turn', () => {
     expect(
       mapTranscriptLine(line({ type: 'user', message: { content: 'do it' } }), 0)[0]?.type,

@@ -60,3 +60,19 @@ describe('IngestRouter: Copilot chats in one workspace', () => {
     expect(sessionStatus(hub, 'b')).toBe('IDLE')
   })
 })
+
+describe('IngestRouter: Claude sessions recovered at startup', () => {
+  it('names a recovered session by its project', () => {
+    const hub = new EventHub(() => Date.now())
+    const router = new IngestRouter(hub)
+    router.fromRecentTranscript('s1', '{"type":"user","cwd":"/Users/me/work/api"}', null)
+    expect(hub.snapshot().sessions.map((s) => s.agentName)).toEqual(['Claude Code · api'])
+  })
+
+  it('does not announce a recovered session that has no project to name it by', () => {
+    const hub = new EventHub(() => Date.now())
+    const router = new IngestRouter(hub)
+    router.fromRecentTranscript('s2', '{"type":"summary"}', '{"type":"mode"}')
+    expect(hub.snapshot().sessions).toEqual([])
+  })
+})
