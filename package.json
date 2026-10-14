@@ -1,6 +1,6 @@
 {
   "name": "agentcubicle",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "3D isometric office that visualizes local AI agent activity",
   "main": "./out/main/index.js",
