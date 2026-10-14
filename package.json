@@ -6,6 +6,7 @@
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
+    "predev": "node scripts/check-node.cjs",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.e2e.json",
@@ -63,5 +64,8 @@
   },
   "packageManager": "pnpm@12.8.1",
   "productName": "AgentCubicle",
-  "author": "AgentCubicle"
+  "author": "AgentCubicle",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
 }
