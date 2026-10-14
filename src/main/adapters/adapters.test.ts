@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { AgentEvent } from '@shared/events'
 import { mapClaudeHook } from './claudeHooks'
-import { mapTranscriptLine, projectCwdIn } from './claudeTranscript'
+import { mapTranscriptLine, projectCwdIn, sessionExitedIn } from './claudeTranscript'
 import { claudeAgentName, toolDetail, toolKind } from './claudeTools'
 
 const common = { session_id: 'abc', cwd: '/Users/me/projects/shop', transcript_path: '/x.jsonl' }
@@ -124,6 +124,13 @@ describe('Claude transcript adapter', () => {
     expect(projectCwdIn(null)).toBeUndefined()
   })
 
+  it('recognises a transcript whose last complete line is the exit record', () => {
+    expect(sessionExitedIn('{"type":"user"}\n{"type":"cost-state"}\n')).toBe(true)
+    expect(sessionExitedIn('{"type":"cost-state"}\n{"type":"user"}')).toBe(false)
+    expect(sessionExitedIn('{"type":"user"}\n{"type":"cost-st')).toBe(false)
+    expect(sessionExitedIn(null)).toBe(false)
+  })
+
   const line = (o: object) =>
     JSON.stringify({
       sessionId: 's',
@@ -132,6 +139,11 @@ describe('Claude transcript adapter', () => {
       uuid: 'u1',
       ...o,
     })
+
+  it('ends the session when Claude Code writes its exit record', () => {
+    const [e] = mapTranscriptLine(JSON.stringify({ type: 'cost-state', sessionId: 's9' }), 5)
+    expect(e).toMatchObject({ type: 'SESSION_ENDED', sessionId: 's9', agentId: 'claude-code' })
+  })
 
   it('leaves the agent name out of lines without a cwd, so the session keeps its project name', () => {
     const [e] = mapTranscriptLine(

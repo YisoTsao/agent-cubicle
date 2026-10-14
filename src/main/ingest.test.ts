@@ -75,4 +75,25 @@ describe('IngestRouter: Claude sessions recovered at startup', () => {
     router.fromRecentTranscript('s2', '{"type":"summary"}', '{"type":"mode"}')
     expect(hub.snapshot().sessions).toEqual([])
   })
+
+  it('does not announce a session whose transcript already ends with the exit record', () => {
+    const hub = new EventHub(() => Date.now())
+    const router = new IngestRouter(hub)
+    router.fromRecentTranscript('s3', '{"type":"user","cwd":"/w/api"}\n{"type":"cost-state"}', null)
+    expect(hub.snapshot().sessions).toEqual([])
+  })
+
+  it('ends a shown session when its exit record arrives, and ignores exits of unknown sessions', () => {
+    let now = Date.now()
+    const hub = new EventHub(() => now)
+    const router = new IngestRouter(hub)
+    router.fromRecentTranscript('s4', '{"type":"user","cwd":"/w/api"}', null)
+    router.fromTranscriptLine('{"type":"cost-state","sessionId":"ghost"}')
+    expect(hub.snapshot().sessions.map((s) => s.sessionId)).toEqual(['s4'])
+
+    router.fromTranscriptLine('{"type":"cost-state","sessionId":"s4"}')
+    now += 60_000
+    hub.tick()
+    expect(hub.snapshot().sessions).toEqual([])
+  })
 })

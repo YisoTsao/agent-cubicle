@@ -3,7 +3,7 @@ import type { EventHub, IngestOutcome } from '@shared/hub'
 import { mapClaudeHook } from './adapters/claudeHooks'
 import { readFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
-import { mapTranscriptLine, projectCwdIn } from './adapters/claudeTranscript'
+import { mapTranscriptLine, projectCwdIn, sessionExitedIn } from './adapters/claudeTranscript'
 import { claudeAgentName } from './adapters/claudeTools'
 import { COPILOT_AGENT_ID, CopilotChatMapper, copilotAgentName } from './adapters/copilotChat'
 
@@ -46,11 +46,23 @@ export class IngestRouter {
 
   /** One transcript line. */
   fromTranscriptLine(line: string): void {
-    for (const event of mapTranscriptLine(line, Date.now())) this.fromLogEvent(event)
+    for (const event of mapTranscriptLine(line, Date.now())) {
+      // An exit for a session the office does not show is nothing to show (no character flashes in).
+      if (event.type === 'SESSION_ENDED' && !this.isShown(event.agentId, event.sessionId)) continue
+      this.fromLogEvent(event)
+    }
+  }
+
+  private isShown(agentId: string, sessionId: string): boolean {
+    return this.hub
+      .snapshot()
+      .sessions.some((s) => s.agentId === agentId && s.sessionId === sessionId)
   }
 
   /** A session that was active right before startup (announced once from its last line). */
   fromRecentTranscript(sessionId: string, tail: string | null, head: string | null): void {
+    // A session that already exited is not running: announcing it would show a character for a closed chat.
+    if (sessionExitedIn(tail)) return
     // Without a project there is nothing to tell this session apart by: wait for a line that has one.
     const cwd = projectCwdIn(tail) ?? projectCwdIn(head)
     if (!cwd) return

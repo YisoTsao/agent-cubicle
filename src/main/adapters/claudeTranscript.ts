@@ -27,6 +27,22 @@ export function projectCwdIn(text: string | null): string | undefined {
   return undefined
 }
 
+/**
+ * True when the last complete line of `text` is Claude Code's `cost-state` record. Claude Code writes
+ * that record once, when a session exits, so it marks a session that is over (not one still open).
+ */
+export function sessionExitedIn(text: string | null): boolean {
+  const last = (text ?? '')
+    .split('\n')
+    .filter((l) => l.trim())
+    .at(-1)
+  try {
+    return (JSON.parse(last ?? '') as { type?: unknown } | null)?.type === 'cost-state'
+  } catch {
+    return false // a line still being written
+  }
+}
+
 export function mapTranscriptLine(line: string, fallbackNow: number): AgentEvent[] {
   let o: unknown
   try {
@@ -44,6 +60,19 @@ export function mapTranscriptLine(line: string, fallbackNow: number): AgentEvent
     isSidechain?: unknown
     isMeta?: unknown
     message?: { content?: unknown; stop_reason?: unknown }
+  }
+  if (rec.type === 'cost-state' && typeof rec.sessionId === 'string') {
+    // The session exited: end it now instead of letting it linger until it times out.
+    return [
+      {
+        agentId: CLAUDE_AGENT_ID,
+        sessionId: rec.sessionId.slice(0, 128),
+        eventId: `log:${rec.sessionId}:exit`.slice(0, 128),
+        type: 'SESSION_ENDED',
+        timestamp: fallbackNow,
+        source: 'log',
+      },
+    ]
   }
   if ((rec.type !== 'assistant' && rec.type !== 'user') || typeof rec.sessionId !== 'string')
     return []
