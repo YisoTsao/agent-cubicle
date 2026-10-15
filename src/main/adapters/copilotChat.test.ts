@@ -133,6 +133,54 @@ describe('Copilot Chat mapper', () => {
     expect(types(events)).toEqual(['TASK_COMPLETED'])
   })
 
+  it('a request written with its running tool shows that tool and its end', () => {
+    const m = new CopilotChatMapper('c')
+    const events = run(
+      m,
+      line({
+        kind: 2,
+        k: ['requests'],
+        v: [{ requestId: 'r1', response: [tool('copilot_findFiles')], modelState: { value: 0 } }],
+      }),
+      line({ kind: 1, k: ['requests', 0, 'modelState'], v: { value: 1 } }),
+    )
+    expect(types(events)).toEqual([
+      'TASK_STARTED',
+      'TOOL_STARTED:copilot_findFiles',
+      'TASK_COMPLETED',
+    ])
+  })
+
+  it('a chat file read from its start shows a running request but not finished history', () => {
+    const m = new CopilotChatMapper('c')
+    const events = run(
+      m,
+      line({
+        kind: 0,
+        v: {
+          requests: [
+            {
+              requestId: 'old',
+              response: [tool('copilot_readFile', { isComplete: true })],
+              modelState: { value: 1 },
+            },
+            {
+              requestId: 'new',
+              response: [tool('copilot_findFiles')],
+              modelState: { value: 0 },
+            },
+          ],
+        },
+      }),
+      line({ kind: 1, k: ['requests', 1, 'response', 0, 'isComplete'], v: true }),
+    )
+    expect(types(events)).toEqual([
+      'TASK_STARTED',
+      'TOOL_STARTED:copilot_findFiles',
+      'TOOL_COMPLETED',
+    ])
+  })
+
   it('tails mid-file: a completion for a tool it never saw still ends the activity', () => {
     const m = new CopilotChatMapper('c')
     expect(

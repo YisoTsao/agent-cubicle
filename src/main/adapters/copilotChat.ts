@@ -71,6 +71,14 @@ function fileOf(message: unknown): string | undefined {
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object'
 
+/** The `modelState.value` a request carries, if any. */
+function modelValue(req: unknown): unknown {
+  const state = isObj(req) ? req['modelState'] : undefined
+  return isObj(state) ? state['value'] : undefined
+}
+
+type Emit = (type: AgentEvent['type'], key: string, extra?: Partial<AgentEvent>) => void
+
 /** Tracks one chat file and turns its new lines into events. */
 export class CopilotChatMapper {
   /** Tools announced so far, by "request:index" → completed? (the log re-sends parts as they change) */
@@ -80,6 +88,8 @@ export class CopilotChatMapper {
   private readonly needsInput = new Set<number>()
   /** Requests that already ended: the log flushes their last parts late, which must not wake the agent. */
   private readonly finished = new Set<number>()
+  /** Number of requests seen so far (a new request's index when the log does not give one). */
+  private requestCount = 0
   private seq = 0
 
   constructor(
@@ -111,8 +121,21 @@ export class CopilotChatMapper {
         ...extra,
       })
 
+    if (kind === 0) {
+      const requests = isObj(v) ? v['requests'] : undefined
+      const list = Array.isArray(requests) ? requests : []
+      this.requestCount = list.length
+      list.forEach((req, n) => this.snapshotRequest(n, req, emit))
+      return events
+    }
+
     if (kind === 2 && path.length === 1 && path[0] === 'requests' && Array.isArray(v)) {
-      for (let r = 0; r < v.length; r++) emit('TASK_STARTED', 'task')
+      const base = typeof (o as { i?: unknown }).i === 'number' ? (o as { i: number }).i : this.requestCount
+      v.forEach((req, r) => {
+        emit('TASK_STARTED', 'task')
+        this.emitRequest(base + r, req, emit)
+      })
+      this.requestCount = base + v.length
       return events
     }
 
@@ -138,25 +161,48 @@ export class CopilotChatMapper {
     }
 
     if (kind === 1 && path[0] === 'requests' && path[2] === 'modelState' && path.length === 3) {
-      const n = Number(path[1])
-      const value = isObj(v) ? v['value'] : undefined
-      if (value === 4) {
-        this.needsInput.add(n)
-        emit('APPROVAL_REQUIRED', 'approval')
-      } else if (value === 0 && this.needsInput.delete(n)) {
-        emit('TASK_STARTED', 'resume')
-      } else if (value === 1 || value === 2) {
-        this.needsInput.delete(n)
-        this.finished.add(n)
-        emit('TASK_COMPLETED', 'done')
-      } else if (value === 3) {
-        this.needsInput.delete(n)
-        this.finished.add(n)
-        emit('TASK_FAILED', 'failed')
-      }
+      this.modelState(Number(path[1]), isObj(v) ? v['value'] : undefined, emit)
       return events
     }
     return events
+  }
+
+  /** A request already in a file read from its start: its finished history is not replayed. */
+  private snapshotRequest(n: number, req: unknown, emit: Emit): void {
+    const value = modelValue(req)
+    if (value === 1 || value === 2 || value === 3) {
+      this.finished.add(n)
+      return
+    }
+    emit('TASK_STARTED', 'task')
+    this.emitRequest(n, req, emit)
+  }
+
+  /** The response parts and state a request already carries when it is first seen. */
+  private emitRequest(n: number, req: unknown, emit: Emit): void {
+    const response = isObj(req) ? req['response'] : undefined
+    const parts = Array.isArray(response) ? response : []
+    parts.forEach((part, index) => this.onPart(n, index, part, emit))
+    this.lengths.set(n, parts.length)
+    const value = modelValue(req)
+    if (value !== undefined) this.modelState(n, value, emit)
+  }
+
+  private modelState(n: number, value: unknown, emit: Emit): void {
+    if (value === 4) {
+      this.needsInput.add(n)
+      emit('APPROVAL_REQUIRED', 'approval')
+    } else if (value === 0 && this.needsInput.delete(n)) {
+      emit('TASK_STARTED', 'resume')
+    } else if (value === 1 || value === 2) {
+      this.needsInput.delete(n)
+      this.finished.add(n)
+      emit('TASK_COMPLETED', 'done')
+    } else if (value === 3) {
+      this.needsInput.delete(n)
+      this.finished.add(n)
+      emit('TASK_FAILED', 'failed')
+    }
   }
 
   private onPart(
