@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { IntegrationStatus } from '@shared/ipc'
+import { CopilotAgentSessionTracker } from './adapters/copilotAgentSessions'
 import { TranscriptWatcher } from './adapters/transcriptWatcher'
 import { DEFAULT_PORT, loadOrCreateToken, publishEndpoint, type EndpointInfo } from './endpoint'
 import { HookInstaller } from './hookInstaller'
@@ -32,6 +33,19 @@ export function copilotRoots(): string[] {
     .filter((dir) => existsSync(dir))
 }
 
+/**
+ * Where newer VS Code builds keep agent-host Copilot sessions (one session.db per session). They sit
+ * next to the workspaceStorage folder: .../Code/User/workspaceStorage → .../Code/agentSessionData.
+ */
+export function copilotAgentSessionRoots(): string[] {
+  return copilotRoots()
+    .map((root) => join(root, '..', '..', 'agentSessionData'))
+    .filter((dir) => existsSync(dir))
+}
+
+/** How often agent session databases are checked for changes. */
+const AGENT_SESSION_POLL_MS = 2000
+
 function configuredPort(): number {
   const raw = process.env['CUBICLE_PORT']
   const n = raw === undefined ? DEFAULT_PORT : Number(raw)
@@ -45,6 +59,8 @@ export class Integrations {
   private endpoint: EndpointInfo | null = null
   private watcher: TranscriptWatcher | null = null
   private copilotWatchers: TranscriptWatcher[] = []
+  private readonly agentSessions = new CopilotAgentSessionTracker()
+  private agentSessionTimer: ReturnType<typeof setInterval> | null = null
   private readonly transcriptsEnabled = process.env['CUBICLE_TRANSCRIPTS'] !== 'off'
   /** Copilot chats follow the transcripts switch, unless a root is given explicitly (tests). */
   private readonly copilotEnabled = !!process.env['CUBICLE_COPILOT_ROOT'] || this.transcriptsEnabled
@@ -58,6 +74,8 @@ export class Integrations {
   }
 
   async stop(): Promise<void> {
+    if (this.agentSessionTimer) clearInterval(this.agentSessionTimer)
+    this.agentSessionTimer = null
     await Promise.all([
       this.server?.stop(),
       this.watcher?.stop(),
@@ -127,9 +145,26 @@ export class Integrations {
     }
   }
 
+  /** VS Code agent-host Copilot sessions: poll their session databases for running and finished requests. */
+  private startCopilotAgentSessions(): void {
+    if (!this.copilotEnabled || this.agentSessionTimer) return
+    const poll = () => {
+      for (const root of copilotAgentSessionRoots()) {
+        try {
+          this.router.fromCopilotAgentSessions(this.agentSessions.scanRoot(root))
+        } catch (err) {
+          console.error('[copilot] agent session scan failed', err)
+        }
+      }
+    }
+    poll()
+    this.agentSessionTimer = setInterval(poll, AGENT_SESSION_POLL_MS)
+  }
+
   /** VS Code Copilot Chat: tail every chat session file (one watcher per VS Code flavour found). */
   private async startCopilot(): Promise<void> {
     if (!this.copilotEnabled) return
+    this.startCopilotAgentSessions()
     for (const root of copilotRoots()) {
       try {
         const watcher = new TranscriptWatcher({

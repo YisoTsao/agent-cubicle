@@ -85,6 +85,14 @@ export class IngestRouter {
     }
   }
 
+  /** Events from VS Code agent sessions (adapters/copilotAgentSessions.ts). */
+  fromCopilotAgentSessions(events: AgentEvent[]): void {
+    for (const event of events) {
+      this.stats.copilot++
+      this.hub.ingest(event)
+    }
+  }
+
   /** A Copilot chat that was active right before startup: show it without replaying history. */
   fromRecentCopilot(file: string): void {
     const m = this.copilotMapper(file)

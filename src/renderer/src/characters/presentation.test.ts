@@ -15,8 +15,9 @@ describe('presentation map', () => {
     expect(PLACE_GROUPS[target] ?? PLACES[target]).toBeDefined()
   })
 
-  it('keeps "stay" states where the character already is', () => {
+  it('keeps completed agents in place and sends stale agents to the lounge', () => {
     expect(placeIdFor('COMPLETED', 'desk-a', 'terminal:1')).toBe('terminal:1')
-    expect(PRESENTATION.STALE.place).toBe('stay')
+    expect(placeIdFor('STALE', 'desk-a', 'desk-a')).toBe('lounge')
+    expect(PRESENTATION.STALE.place).toBe('lounge')
   })
 })

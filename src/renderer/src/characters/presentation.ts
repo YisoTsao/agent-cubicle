@@ -51,7 +51,7 @@ export const PRESENTATION: Record<PresentationState, Presentation> = {
   COMPLETED: { place: 'stay', gesture: 'celebrate', overlay: 'check' },
   ERROR: { place: 'desk', gesture: 'confused', overlay: 'error', screen: 'error' },
   STALE: {
-    place: 'stay',
+    place: 'lounge',
     gesture: 'sit_idle',
     gestureByPosture: { stand: 'stand_idle', sit_sofa: 'idle_coffee' },
     overlay: 'question',

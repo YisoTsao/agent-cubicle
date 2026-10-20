@@ -87,17 +87,25 @@ export function fromSnapshot(
 ): { agents: AgentView[]; overflow: number } {
   const agents: AgentView[] = []
   let overflow = 0
-  let waiting = 0
   const waitSpots = PLACE_GROUPS['wait']?.length ?? 0
+  const priority = (presence: StateSnapshot['sessions'][number]['presence']) =>
+    presence === 'ACTIVE' || presence === 'WAITING_APPROVAL' ? 2 : presence === 'IDLE' ? 0 : 1
+  const waitingSpots = new Map(
+    [...snapshot.sessions]
+      .filter((s) => s.seat === undefined || !WORKSTATIONS[s.seat])
+      .sort((a, b) => priority(b.presence) - priority(a.presence) || b.lastEventAt - a.lastEventAt)
+      .slice(0, waitSpots)
+      .map((s, index) => [s, index]),
+  )
   for (const s of snapshot.sessions) {
     const desk = s.seat !== undefined ? WORKSTATIONS[s.seat] : undefined
     // No desk: stand in the waiting area while there is room, otherwise only count.
-    if (!desk && waiting >= waitSpots) {
+    const waitingIndex = waitingSpots.get(s)
+    if (!desk && waitingIndex === undefined) {
       overflow++
       continue
     }
-    const seatKey = desk?.id ?? `wait:${waiting}`
-    if (!desk) waiting++
+    const seatKey = desk?.id ?? `wait:${waitingIndex}`
     const view: AgentView = {
       id: `${s.agentId}:${s.sessionId}`,
       name: s.agentName,
